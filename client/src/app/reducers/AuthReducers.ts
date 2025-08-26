@@ -22,7 +22,7 @@ export const login = createAsyncThunk(
   'auth/login',
   async (credentials: { email: string; password: string}, { rejectWithValue }) => {
     try {
-      const response = await axios.post(`${REACT_APP_API_URL}/auth/login`, credentials);
+      const response = await axios.post(`${REACT_APP_API_URL}/api/auth/login`, credentials);
       return response.data;
     } catch (error: unknown) {
       if (error instanceof Error) {
@@ -38,7 +38,7 @@ export const register = createAsyncThunk<
   RegisterUserData
 >('auth/register', async (userData, { rejectWithValue }) => {
   try {
-    const response = await axios.post(`${REACT_APP_API_URL}/auth/register`, {
+    const response = await axios.post(`${REACT_APP_API_URL}/api/auth/register`, {
       ...userData,
       roleId: userData.isPractitioner ? 2 : 1,
     });

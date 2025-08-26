@@ -21,6 +21,7 @@ import {
   fetchConsultationStats,
 } from "@/app/reducers/ConsultationReducer";
 import { fetchPatients } from "@/app/reducers/PatientsReducer";
+import { fetchPrescriptions } from "@/app/reducers/PrescriptionsReducer";
 import { motion } from "framer-motion";
 import PetCharacter from "@/assets/images/pet_character.svg";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -36,12 +37,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import SidebarClients from "@/components/core/clients/SidebarClients";
 
-const prescriptions = [
-  { name: "Antibiotique - Médor", desc: "Dr. Martin • 12/06/2024" },
-  { name: "Vermifuge - Félix", desc: "Dr. Dupont • 05/06/2024" },
-  { name: "Anti-puce - Rex", desc: "Dr. Martin • 28/05/2024" },
-  { name: "Anti-inflammatoire - Luna", desc: "Dr. Bernard • 20/05/2024" },
-];
+
 
 // Fonction utilitaire pour formater la date en français
 const formatNextAppointmentDate = (dateString: string) => {
@@ -84,6 +80,7 @@ const DashboardPage = () => {
     error: consultationsError,
   } = useAppSelector((state) => state.consultations);
   const { patients, isLoading: patientsLoading, error: patientsError } = useAppSelector((state) => state.patients);
+  const { prescriptions: prescriptionsData, isLoading: prescriptionsLoading, error: prescriptionsError } = useAppSelector((state) => state.prescriptions);
   const { user } = useAppSelector((state) => state.auth);
 
   const quickActions = [
@@ -139,6 +136,7 @@ const DashboardPage = () => {
   useEffect(() => {
     dispatch(fetchConsultations());
     dispatch(fetchPatients());
+    dispatch(fetchPrescriptions());
     if (user?.role_id === 2) {
       dispatch(fetchConsultationStats());
     }
@@ -170,7 +168,7 @@ const DashboardPage = () => {
     day: "numeric",
   });
 
-  if (consultationsLoading || patientsLoading) {
+  if (consultationsLoading || patientsLoading || prescriptionsLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <motion.div
@@ -182,11 +180,11 @@ const DashboardPage = () => {
     );
   }
 
-  if (consultationsError || patientsError) {
+  if (consultationsError || patientsError || prescriptionsError) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-red-600 bg-red-50 p-4 rounded-xl shadow-sm">
-          Une erreur est survenue lors du chargement des données: {consultationsError || patientsError}
+          Une erreur est survenue lors du chargement des données: {consultationsError || patientsError || prescriptionsError}
         </div>
       </div>
     );
@@ -466,30 +464,38 @@ const DashboardPage = () => {
                 <h3 className="text-xl font-bold text-[#7A90C3]">
                   Mes ordonnances
                 </h3>
-                <a
-                  href="#"
-                  className="text-[#7A90C3] text-base font-medium hover:underline"
+                <button
+                  onClick={() => navigate('/prescriptions')}
+                  className="text-[#7A90C3] text-base font-medium hover:underline cursor-pointer"
                 >
                   Tout voir
-                </a>
+                </button>
               </div>
               <div className="flex flex-col gap-4">
-                {prescriptions.map((presc, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-[#7A90C3]/10 transition-colors"
-                  >
-                    <div className="w-12 h-12 rounded-lg bg-[#7A90C3]/20 flex items-center justify-center">
-                      <Pill className="w-6 h-6 text-[#7A90C3]" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900 text-base">
-                        {presc.name}
-                      </p>
-                      <p className="text-sm text-[#7A90C3]">{presc.desc}</p>
-                    </div>
+                {prescriptionsData.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-500">Aucune ordonnance</p>
                   </div>
-                ))}
+                ) : (
+                  prescriptionsData.slice(0, 4).map((presc, idx) => (
+                    <div
+                      key={presc.id}
+                      className="flex items-center gap-4 p-3 rounded-xl hover:bg-[#7A90C3]/10 transition-colors"
+                    >
+                      <div className="w-12 h-12 rounded-lg bg-[#7A90C3]/20 flex items-center justify-center">
+                        <Pill className="w-6 h-6 text-[#7A90C3]" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900 text-base">
+                          {presc.items[0]?.medicationName || 'Médicament'} - {presc.patient?.name || 'Patient'}
+                        </p>
+                        <p className="text-sm text-[#7A90C3]">
+                          {presc.practitioner?.name || 'Dr.'} • {new Date(presc.prescriptionDate + 'T00:00:00').toLocaleDateString('fr-FR')}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </Card>
 

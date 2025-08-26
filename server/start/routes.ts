@@ -4,18 +4,18 @@ import swagger from "Config/swagger";
 import HealthCheck from "@ioc:Adonis/Core/HealthCheck";
 
 Route.group(() => {
-  // Groupe de routes authentifiées
-  Route.group(() => {
-    Route.get("/", "UsersController.index").as("users.index");
-  }).middleware("auth");
-
-  // Routes d'authentification
+  // Routes d'authentification (pas de middleware auth)
   Route.group(() => {
     Route.post("/login", "AuthController.login").as("auth.login");
     Route.post("/logout", "AuthController.logout").as("auth.logout");
     Route.get("/me", "AuthController.me").as("auth.me");
     Route.post("/register", "AuthController.register").as("auth.register");
   }).prefix("/auth");
+
+  // Groupe de routes authentifiées
+  Route.group(() => {
+    Route.get("/", "UsersController.index").as("users.index");
+  }).middleware("auth");
 
   // Routes pour les orders
   Route.group(() => {
@@ -80,5 +80,8 @@ Route.group(() => {
     Route.post('/consultations', 'ConsultationsController.store')
     Route.put('/consultations/:id', 'ConsultationsController.update')
     Route.delete('/consultations/:id', 'ConsultationsController.destroy')
+
+    // Prescription routes
+    Route.resource('prescriptions', 'PrescriptionsController').apiOnly()
   }).middleware('auth')
 }).prefix("/api");

@@ -11,6 +11,7 @@ import ordersReducer from './reducers/OrdersReducers';
 import availabilityReducer from './reducers/AvailabilityReducer';
 import consultationReducer from './reducers/ConsultationReducer';
 import patientsReducer from './reducers/PatientsReducer';
+import prescriptionsReducer from './reducers/PrescriptionsReducer';
 import { setStore } from '../utils/axiosInstance'; // Mettre à jour le chemin d'importation
 
 // Create the logger
@@ -38,6 +39,7 @@ const rootReducer = combineReducers({
   availability: availabilityReducer,
   consultations: consultationReducer,
   patients: patientsReducer,
+  prescriptions: prescriptionsReducer,
 });
 
 // Create a persisted reducer
