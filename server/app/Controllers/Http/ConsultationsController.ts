@@ -26,6 +26,9 @@ export default class ConsultationsController {
           .orderBy('date', 'asc')
           .orderBy('time', 'asc')
           .preload('patient')
+          .preload('practitioner', (query) => {
+            query.preload('user')
+          })
 
         return response.ok(consultations)
       }
@@ -40,6 +43,7 @@ export default class ConsultationsController {
         .preload('practitioner', (query) => {
           query.preload('user')
         })
+        .preload('patient')
 
       return response.ok(consultations)
     } catch (error) {

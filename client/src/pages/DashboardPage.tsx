@@ -42,34 +42,29 @@ const prescriptions = [
   { name: "Anti-inflammatoire - Luna", desc: "Dr. Bernard • 20/05/2024" },
 ];
 
-const nextAppointment = {
-  date: "Vendredi 14 juin 2024",
-  hour: "16:30",
-  vet: "Dr. Martin",
-  animal: "Médor",
-  type: "Consultation vidéo",
+// Fonction utilitaire pour formater la date en français
+const formatNextAppointmentDate = (dateString: string) => {
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  } catch {
+    return 'Date non définie';
+  }
 };
 
-const animals = [
-  {
-    name: "Médor",
-    type: "Chien",
-    color: "bg-[#EAF1FF]",
-    iconColor: "text-[#7A90C3]",
-  },
-  {
-    name: "Félix",
-    type: "Chat",
-    color: "bg-[#FFF6E9]",
-    iconColor: "text-[#F4A259]",
-  },
-  {
-    name: "Luna",
-    type: "Chat",
-    color: "bg-[#F3E6FD]",
-    iconColor: "text-[#A259F4]",
-  },
-];
+// Couleurs pour les types d'animaux
+const animalColors = {
+  "Chien": { bg: "bg-[#EAF1FF]", icon: "text-[#7A90C3]" },
+  "Chat": { bg: "bg-[#FFF6E9]", icon: "text-[#F4A259]" },
+  "Lapin": { bg: "bg-[#F3E6FD]", icon: "text-[#A259F4]" },
+  "Oiseau": { bg: "bg-[#E6F7E6]", icon: "text-[#3CB371]" },
+  "default": { bg: "bg-[#F0F0F0]", icon: "text-[#666666]" }
+};
 
 const sidebarIcons = [
   { icon: PawPrint, path: "/", label: "Dashboard" },
@@ -145,6 +140,29 @@ const DashboardPage = () => {
       dispatch(fetchConsultationStats());
     }
   }, [dispatch, user?.role_id]);
+
+  // Calculer le prochain rendez-vous depuis les consultations
+  const nextAppointment = consultations
+    .filter(c => c.status === 'pending' && new Date(c.date) > new Date())
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+
+  // Créer la liste des animaux depuis les consultations
+  const animals = consultations
+    .filter(c => c.patient)
+    .reduce((acc, consultation) => {
+      const patient = consultation.patient;
+      if (patient && !acc.find(a => a.id === patient.id)) {
+        const colors = animalColors[patient.species as keyof typeof animalColors] || animalColors.default;
+        acc.push({
+          id: patient.id,
+          name: patient.name,
+          type: patient.species,
+          color: colors.bg,
+          iconColor: colors.icon,
+        });
+      }
+      return acc;
+    }, [] as Array<{id: number, name: string, type: string, color: string, iconColor: string}>);
 
   // Date du jour en français
   const today = new Date();
@@ -351,20 +369,36 @@ const DashboardPage = () => {
                   <span className="text-xs text-gray-400">À venir</span>
                 </div>
                 <div className="flex-1 flex flex-col justify-center items-start mt-2">
-                  <span className="text-lg font-bold text-[#7A90C3] mb-1">
-                    {nextAppointment.date} à {nextAppointment.hour}
-                  </span>
-                  <span className="text-base text-gray-700">
-                    Avec <b>{nextAppointment.vet}</b> pour{" "}
-                    <b>{nextAppointment.animal}</b>
-                  </span>
-                  <span className="text-sm text-gray-500 mt-2">
-                    {nextAppointment.type}
-                  </span>
-                  <Button className="mt-6 px-6 py-3 bg-gradient-to-r from-[#7A90C3] to-[#F4A259] text-white font-bold rounded-xl shadow hover:shadow-lg transition-all text-base flex items-center gap-2" onClick={() => navigate('/join-consultation')}>
-                    <Video className="w-5 h-5 mr-1" /> Rejoindre la
-                    téléconsultation
-                  </Button>
+                  {nextAppointment ? (
+                    <>
+                      <span className="text-lg font-bold text-[#7A90C3] mb-1">
+                        {formatNextAppointmentDate(nextAppointment.date)} à {nextAppointment.time}
+                      </span>
+                      <span className="text-base text-gray-700">
+                        Avec <b>Dr. {nextAppointment.practitioner?.user?.name || 'Vétérinaire'}</b> pour{" "}
+                        <b>{nextAppointment.patient?.name || nextAppointment.patientName || 'Patient'}</b>
+                      </span>
+                      <span className="text-sm text-gray-500 mt-2">
+                        {nextAppointment.type}
+                      </span>
+                      <Button className="mt-6 px-6 py-3 bg-gradient-to-r from-[#7A90C3] to-[#F4A259] text-white font-bold rounded-xl shadow hover:shadow-lg transition-all text-base flex items-center gap-2" onClick={() => navigate('/join-consultation')}>
+                        <Video className="w-5 h-5 mr-1" /> Rejoindre la
+                        téléconsultation
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-lg font-bold text-[#7A90C3] mb-1">
+                        Aucun rendez-vous à venir
+                      </span>
+                      <span className="text-base text-gray-700">
+                        Prenez rendez-vous pour votre animal
+                      </span>
+                      <Button className="mt-6 px-6 py-3 bg-gradient-to-r from-[#7A90C3] to-[#F4A259] text-white font-bold rounded-xl shadow hover:shadow-lg transition-all text-base flex items-center gap-2" onClick={() => navigate('/book-appointment')}>
+                        <Calendar className="w-5 h-5 mr-1" /> Prendre rendez-vous
+                      </Button>
+                    </>
+                  )}
                 </div>
                 {/* Badge aujourd'hui si besoin */}
                 {/* <Badge variant="secondary" className="absolute top-6 right-8 bg-[#F44F7A] text-white px-3 py-1 rounded-full">Aujourd'hui</Badge> */}
