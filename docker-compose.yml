@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  frontend_pawmed:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: pawmed-frontend
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  backend_pawmed:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: pawmed-server
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "27000:3333"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    networks:
+      - app-network
+
+  db_pawmed:
+    image: mysql:8.0
+    container_name: pawmed-db
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      MYSQL_DATABASE: pawmedb
+      MYSQL_ROOT_PASSWORD: nmsiGSXJda3pk0d
+      MYSQL_USER: pawmed
+      MYSQL_PASSWORD: nmsiGSXJda3pk0d
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - app-network
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_pawmed
+    restart: unless-stopped
+    ports:
+      - "8190:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - app-network
+    depends_on:
+      - frontend_pawmed
+      - backend_pawmed
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  dbdata:
