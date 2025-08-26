@@ -22,7 +22,7 @@ const ConsultationsPage: React.FC = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { consultations, isLoading, error } = useAppSelector((state) => state.consultations);
-  const { items: patients } = useAppSelector((state) => state.patients);
+  const { patients } = useAppSelector((state) => state.patients);
   const { user } = useAppSelector(state => state.auth);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState<ConsultationFormData>({
@@ -54,13 +54,13 @@ const ConsultationsPage: React.FC = () => {
 
     // Si un patient est sélectionné, remplir automatiquement les champs
     if (name === 'patientId') {
-      const selectedPatient = patients.find(p => p.id === Number(value));
+      const selectedPatient = patients.find((p: any) => p.id === Number(value));
       if (selectedPatient) {
         setFormData(prev => ({
           ...prev,
           patientId: selectedPatient.id,
           patientName: selectedPatient.name,
-          ownerName: selectedPatient.owner_name
+          ownerName: selectedPatient.ownerName  
         }));
       }
     }
@@ -236,9 +236,9 @@ const ConsultationsPage: React.FC = () => {
                         className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
                       >
                         <option value="">Sélectionner un patient</option>
-                        {patients.map((patient) => (
+                        {patients.map((patient: any) => (
                           <option key={patient.id} value={patient.id}>
-                            {patient.name} ({patient.owner_name})
+                            {patient.name} ({patient.ownerName})
                           </option>
                         ))}
                       </select>

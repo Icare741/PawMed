@@ -20,6 +20,7 @@ import {
   fetchConsultations,
   fetchConsultationStats,
 } from "@/app/reducers/ConsultationReducer";
+import { fetchPatients } from "@/app/reducers/PatientsReducer";
 import { motion } from "framer-motion";
 import PetCharacter from "@/assets/images/pet_character.svg";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -79,9 +80,10 @@ const DashboardPage = () => {
   const {
     consultations,
     stats: serverStats,
-    isLoading,
-    error,
+    isLoading: consultationsLoading,
+    error: consultationsError,
   } = useAppSelector((state) => state.consultations);
+  const { patients, isLoading: patientsLoading, error: patientsError } = useAppSelector((state) => state.patients);
   const { user } = useAppSelector((state) => state.auth);
 
   const quickActions = [
@@ -136,6 +138,7 @@ const DashboardPage = () => {
 
   useEffect(() => {
     dispatch(fetchConsultations());
+    dispatch(fetchPatients());
     if (user?.role_id === 2) {
       dispatch(fetchConsultationStats());
     }
@@ -146,23 +149,17 @@ const DashboardPage = () => {
     .filter(c => c.status === 'pending' && new Date(c.date) > new Date())
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
 
-  // Créer la liste des animaux depuis les consultations
-  const animals = consultations
-    .filter(c => c.patient)
-    .reduce((acc, consultation) => {
-      const patient = consultation.patient;
-      if (patient && !acc.find(a => a.id === patient.id)) {
-        const colors = animalColors[patient.species as keyof typeof animalColors] || animalColors.default;
-        acc.push({
-          id: patient.id,
-          name: patient.name,
-          type: patient.species,
-          color: colors.bg,
-          iconColor: colors.icon,
-        });
-      }
-      return acc;
-    }, [] as Array<{id: number, name: string, type: string, color: string, iconColor: string}>);
+  // Créer la liste des animaux depuis les patients
+  const animals = patients.map(patient => {
+    const colors = animalColors[patient.species as keyof typeof animalColors] || animalColors.default;
+    return {
+      id: patient.id,
+      name: patient.name,
+      type: patient.species,
+      color: colors.bg,
+      iconColor: colors.icon,
+    };
+  });
 
   // Date du jour en français
   const today = new Date();
@@ -173,7 +170,7 @@ const DashboardPage = () => {
     day: "numeric",
   });
 
-  if (isLoading) {
+  if (consultationsLoading || patientsLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <motion.div
@@ -185,11 +182,11 @@ const DashboardPage = () => {
     );
   }
 
-  if (error) {
+  if (consultationsError || patientsError) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-red-600 bg-red-50 p-4 rounded-xl shadow-sm">
-          Une erreur est survenue lors du chargement des données: {error}
+          Une erreur est survenue lors du chargement des données: {consultationsError || patientsError}
         </div>
       </div>
     );
@@ -441,7 +438,8 @@ const DashboardPage = () => {
                       scale: 1.07,
                       boxShadow: "0 4px 24px #F4A25933",
                     }}
-                    className="flex flex-col items-center justify-center p-4 rounded-2xl shadow bg-white min-w-[110px] min-h-[120px] border-2 border-dashed border-[#F4A259] hover:bg-[#F4A259]/10 transition-all"
+                    onClick={() => navigate('/patients')}
+                    className="flex flex-col items-center justify-center p-4 rounded-2xl shadow bg-white min-w-[110px] min-h-[120px] border-2 border-dashed border-[#F4A259] hover:bg-[#F4A259]/10 transition-all cursor-pointer"
                     style={{ flex: "1 1 110px", maxWidth: "120px" }}
                   >
                     <Plus className="w-8 h-8 mb-2 text-[#F4A259]" />
