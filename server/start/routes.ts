@@ -4,18 +4,18 @@ import swagger from "Config/swagger";
 import HealthCheck from "@ioc:Adonis/Core/HealthCheck";
 
 Route.group(() => {
-  // Groupe de routes authentifiées
-  Route.group(() => {
-    Route.get("/", "UsersController.index").as("users.index");
-  }).middleware("auth");
-
-  // Routes d'authentification
+  // Routes d'authentification (pas de middleware auth)
   Route.group(() => {
     Route.post("/login", "AuthController.login").as("auth.login");
     Route.post("/logout", "AuthController.logout").as("auth.logout");
     Route.get("/me", "AuthController.me").as("auth.me");
     Route.post("/register", "AuthController.register").as("auth.register");
   }).prefix("/auth");
+
+  // Groupe de routes authentifiées
+  Route.group(() => {
+    Route.get("/", "UsersController.index").as("users.index");
+  }).middleware("auth");
 
   // Routes pour les orders
   Route.group(() => {
@@ -59,12 +59,6 @@ Route.group(() => {
 
   // Protected routes
   Route.group(() => {
-    // Practitioner routes
-    Route.get('/practitioners', 'PractitionersController.index')
-    Route.get('/practitioners/:id', 'PractitionersController.show')
-    Route.put('/practitioners/:id', 'PractitionersController.update')
-    Route.delete('/practitioners/:id', 'PractitionersController.destroy')
-
     // Availability routes
     Route.get('/availabilities', 'AvailabilitiesController.index')
     Route.post('/availabilities', 'AvailabilitiesController.store')
@@ -73,6 +67,7 @@ Route.group(() => {
 
     // Patient routes
     Route.resource('patients', 'PatientsController').apiOnly()
+    Route.get('/patients/practitioner/all', 'PatientsController.allForPractitioner')
 
     // Consultation routes
     Route.get('/consultations/stats', 'ConsultationsController.stats')
@@ -80,5 +75,14 @@ Route.group(() => {
     Route.post('/consultations', 'ConsultationsController.store')
     Route.put('/consultations/:id', 'ConsultationsController.update')
     Route.delete('/consultations/:id', 'ConsultationsController.destroy')
+
+    // Prescription routes
+    Route.resource('prescriptions', 'PrescriptionsController').apiOnly()
+
+    // Consultation routes avec créneaux disponibles
+    Route.get('/consultations/slots/:practitionerId/:date', 'ConsultationsController.getAvailableSlots')
+
+    // Practitioner routes
+    Route.resource('practitioners', 'PractitionersController').apiOnly()
   }).middleware('auth')
 }).prefix("/api");

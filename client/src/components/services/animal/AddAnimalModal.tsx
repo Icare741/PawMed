@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CreatePatientData } from '@/app/reducers/PatientsReducer';
 
 // Style pour la barre de défilement personnalisée
 const scrollbarStyles = `
@@ -39,23 +40,19 @@ const scrollbarStyles = `
 interface AddAnimalModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: CreatePatientData) => void;
 }
 
 const AddAnimalModal: React.FC<AddAnimalModalProps> = ({ isOpen, onClose, onSubmit }) => {
   const [animalType, setAnimalType] = React.useState<string>("");
-  const [formData, setFormData] = React.useState({
+  const [formData, setFormData] = React.useState<CreatePatientData>({
     name: "",
-    type: "",
+    species: "",
     breed: "",
-    age: "",
-    weight: "",
     birthDate: "",
-    gender: "",
-    description: "",
-    microchip: "",
-    allergies: "",
-    medications: "",
+    ownerName: "",
+    ownerPhone: "",
+    medicalHistory: "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -124,7 +121,7 @@ const AddAnimalModal: React.FC<AddAnimalModalProps> = ({ isOpen, onClose, onSubm
                       }`}
                       onClick={() => {
                         setAnimalType("Chien");
-                        setFormData(prev => ({ ...prev, type: "Chien" }));
+                        setFormData(prev => ({ ...prev, species: "Chien" }));
                       }}
                     >
                       <Dog className={`w-10 h-10 ${animalType === "Chien" ? "text-[#4F7AF4]" : "text-gray-400"}`} />
@@ -141,7 +138,7 @@ const AddAnimalModal: React.FC<AddAnimalModalProps> = ({ isOpen, onClose, onSubm
                       }`}
                       onClick={() => {
                         setAnimalType("Chat");
-                        setFormData(prev => ({ ...prev, type: "Chat" }));
+                        setFormData(prev => ({ ...prev, species: "Chat" }));
                       }}
                     >
                       <Cat className={`w-10 h-10 ${animalType === "Chat" ? "text-[#F4A259]" : "text-gray-400"}`} />
@@ -178,36 +175,7 @@ const AddAnimalModal: React.FC<AddAnimalModalProps> = ({ isOpen, onClose, onSubm
                   </div>
                 </div>
 
-                {/* Âge et poids */}
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="age" className="text-lg font-semibold text-gray-700">Âge</Label>
-                    <Input
-                      id="age"
-                      name="age"
-                      placeholder="Âge de l'animal"
-                      value={formData.age}
-                      onChange={handleChange}
-                      required
-                      className="h-12 rounded-xl border-gray-200 focus:border-[#4F7AF4] focus:ring-[#4F7AF4]/20"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="weight" className="text-lg font-semibold text-gray-700">Poids (kg)</Label>
-                    <Input
-                      id="weight"
-                      name="weight"
-                      type="number"
-                      placeholder="Poids de l'animal"
-                      value={formData.weight}
-                      onChange={handleChange}
-                      required
-                      className="h-12 rounded-xl border-gray-200 focus:border-[#4F7AF4] focus:ring-[#4F7AF4]/20"
-                    />
-                  </div>
-                </div>
-
-                {/* Date de naissance et genre */}
+                {/* Date de naissance et nom du propriétaire */}
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="birthDate" className="text-lg font-semibold text-gray-700">Date de naissance</Label>
@@ -221,77 +189,43 @@ const AddAnimalModal: React.FC<AddAnimalModalProps> = ({ isOpen, onClose, onSubm
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="gender" className="text-lg font-semibold text-gray-700">Genre</Label>
-                    <Select
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}
-                    >
-                      <SelectTrigger className="h-12 rounded-xl border-gray-200 focus:border-[#4F7AF4] focus:ring-[#4F7AF4]/20">
-                        <SelectValue placeholder="Sélectionner le genre" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Mâle</SelectItem>
-                        <SelectItem value="female">Femelle</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="ownerName" className="text-lg font-semibold text-gray-700">Nom du propriétaire</Label>
+                    <Input
+                      id="ownerName"
+                      name="ownerName"
+                      placeholder="Votre nom"
+                      value={formData.ownerName}
+                      onChange={handleChange}
+                      required
+                      className="h-12 rounded-xl border-gray-200 focus:border-[#4F7AF4] focus:ring-[#4F7AF4]/20"
+                    />
                   </div>
                 </div>
 
-                {/* Numéro de puce */}
+                {/* Téléphone du propriétaire */}
                 <div className="space-y-2">
-                  <Label htmlFor="microchip" className="text-lg font-semibold text-gray-700">Numéro de puce</Label>
+                  <Label htmlFor="ownerPhone" className="text-lg font-semibold text-gray-700">Téléphone</Label>
                   <Input
-                    id="microchip"
-                    name="microchip"
-                    placeholder="Numéro de puce électronique"
-                    value={formData.microchip}
+                    id="ownerPhone"
+                    name="ownerPhone"
+                    placeholder="Votre numéro de téléphone"
+                    value={formData.ownerPhone}
                     onChange={handleChange}
                     className="h-12 rounded-xl border-gray-200 focus:border-[#4F7AF4] focus:ring-[#4F7AF4]/20"
                   />
                 </div>
 
-                {/* Allergies et médicaments */}
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="allergies" className="text-lg font-semibold text-gray-700 flex items-center gap-2">
-                      <HeartPulse className="w-5 h-5 text-[#F44F7A]" />
-                      Allergies
-                    </Label>
-                    <Textarea
-                      id="allergies"
-                      name="allergies"
-                      placeholder="Allergies connues"
-                      value={formData.allergies}
-                      onChange={handleChange}
-                      className="h-32 rounded-xl border-gray-200 focus:border-[#4F7AF4] focus:ring-[#4F7AF4]/20"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="medications" className="text-lg font-semibold text-gray-700 flex items-center gap-2">
-                      <FileText className="w-5 h-5 text-[#4F7AF4]" />
-                      Médicaments
-                    </Label>
-                    <Textarea
-                      id="medications"
-                      name="medications"
-                      placeholder="Médicaments en cours"
-                      value={formData.medications}
-                      onChange={handleChange}
-                      className="h-32 rounded-xl border-gray-200 focus:border-[#4F7AF4] focus:ring-[#4F7AF4]/20"
-                    />
-                  </div>
-                </div>
-
-                {/* Description */}
+                {/* Historique médical */}
                 <div className="space-y-2">
-                  <Label htmlFor="description" className="text-lg font-semibold text-gray-700 flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-[#F4A259]" />
-                    Description
+                  <Label htmlFor="medicalHistory" className="text-lg font-semibold text-gray-700 flex items-center gap-2">
+                    <HeartPulse className="w-5 h-5 text-[#F44F7A]" />
+                    Historique médical
                   </Label>
                   <Textarea
-                    id="description"
-                    name="description"
-                    placeholder="Description de l'animal (comportement, particularités...)"
-                    value={formData.description}
+                    id="medicalHistory"
+                    name="medicalHistory"
+                    placeholder="Antécédents médicaux, allergies, traitements en cours..."
+                    value={formData.medicalHistory}
                     onChange={handleChange}
                     className="h-32 rounded-xl border-gray-200 focus:border-[#4F7AF4] focus:ring-[#4F7AF4]/20"
                   />

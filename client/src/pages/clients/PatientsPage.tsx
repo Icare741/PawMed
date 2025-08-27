@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Dog,
@@ -21,72 +21,76 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import AddAnimalModal from '@/components/services/animal/AddAnimalModal';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { fetchPatients, createPatient, deletePatient } from '@/app/reducers/PatientsReducer';
+import { Patient, CreatePatientData } from '@/app/reducers/PatientsReducer';
 
-// Données de test pour les animaux
-const animals = [
-  {
-    id: 1,
-    name: "Médor",
-    type: "Chien",
-    breed: "Labrador",
-    age: "3 ans",
-    weight: "28 kg",
-    lastVisit: "12 juin 2024",
-    nextVisit: "14 juin 2024",
-    color: "bg-[#EAF1FF]",
-    iconColor: "text-[#7A90C3]",
-    avatar: null,
-    healthStatus: "Bon",
-    vaccinations: [
-      { name: "CHPL", date: "01/01/2024", next: "01/01/2025" },
-      { name: "Rage", date: "15/03/2024", next: "15/03/2025" }
-    ]
-  },
-  {
-    id: 2,
-    name: "Félix",
-    type: "Chat",
-    breed: "Siamois",
-    age: "2 ans",
-    weight: "4.5 kg",
-    lastVisit: "05 juin 2024",
-    nextVisit: "18 juin 2024",
-    color: "bg-[#FFF6E9]",
-    iconColor: "text-[#F4A259]",
-    avatar: null,
-    healthStatus: "Bon",
-    vaccinations: [
-      { name: "Typhus", date: "10/02/2024", next: "10/02/2025" },
-      { name: "Leucose", date: "10/02/2024", next: "10/02/2025" }
-    ]
-  },
-  {
-    id: 3,
-    name: "Luna",
-    type: "Chat",
-    breed: "Persan",
-    age: "1 an",
-    weight: "3.8 kg",
-    lastVisit: "28 mai 2024",
-    nextVisit: "20 juin 2024",
-    color: "bg-[#F3E6FD]",
-    iconColor: "text-[#A259F4]",
-    avatar: null,
-    healthStatus: "Bon",
-    vaccinations: [
-      { name: "Typhus", date: "15/04/2024", next: "15/04/2025" },
-      { name: "Leucose", date: "15/04/2024", next: "15/04/2025" }
-    ]
-  }
-];
+// Couleurs pour les types d'animaux
+const animalColors = {
+  "Chien": { bg: "bg-[#EAF1FF]", icon: "text-[#7A90C3]" },
+  "Chat": { bg: "bg-[#FFF6E9]", icon: "text-[#F4A259]" },
+  "Lapin": { bg: "bg-[#F3E6FD]", icon: "text-[#A259F4]" },
+  "Oiseau": { bg: "bg-[#E6F7E6]", icon: "text-[#3CB371]" },
+  "default": { bg: "bg-[#F0F0F0]", icon: "text-[#666666]" }
+};
 
 const PatientsPage = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const dispatch = useAppDispatch();
+  const { patients, isLoading, error } = useAppSelector(state => state.patients);
 
-  const handleAddAnimal = (data: any) => {
-    // Ici, vous pouvez ajouter la logique pour sauvegarder le nouvel animal
-    console.log('Nouvel animal:', data);
+  useEffect(() => {
+    dispatch(fetchPatients());
+  }, [dispatch]);
+
+  const handleAddAnimal = async (data: CreatePatientData) => {
+    try {
+      await dispatch(createPatient(data)).unwrap();
+      setIsAddModalOpen(false);
+    } catch (error) {
+      console.error('Erreur lors de la création du patient:', error);
+    }
   };
+
+  const handleDeleteAnimal = async (id: number) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet animal ?')) {
+      try {
+        await dispatch(deletePatient(id)).unwrap();
+      } catch (error) {
+        console.error('Erreur lors de la suppression du patient:', error);
+      }
+    }
+  };
+
+  // Calculer l'âge et autres informations
+  const calculateAge = (birthDate: string | null) => {
+    if (!birthDate) return 'Âge inconnu';
+    const birth = new Date(birthDate);
+    const today = new Date();
+    const ageInYears = today.getFullYear() - birth.getFullYear();
+    return `${ageInYears} an${ageInYears > 1 ? 's' : ''}`;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] via-[#FDE7EF]/40 to-[#E6F0FD] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#F4A259] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement des animaux...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] via-[#FDE7EF]/40 to-[#E6F0FD] flex items-center justify-center">
+        <div className="text-center text-red-600 bg-red-50 p-6 rounded-xl">
+          <p>Erreur lors du chargement : {error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <TooltipProvider>
@@ -128,7 +132,7 @@ const PatientsPage = () => {
                   >
                     <div className="flex items-center gap-2 bg-[#F4A259]/10 p-3 rounded-xl">
                       <div className="w-2 h-2 rounded-full bg-[#F4A259] animate-pulse" />
-                      <span className="text-[#F4A259] font-medium">{animals.length} animaux enregistrés</span>
+                      <span className="text-[#F4A259] font-medium">{patients.length} animaux enregistrés</span>
                     </div>
                   </motion.div>
                   <Button
@@ -155,90 +159,93 @@ const PatientsPage = () => {
 
           {/* Liste des animaux */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {animals.map((animal) => (
-              <motion.div
-                key={animal.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                whileHover={{ scale: 1.02 }}
-                className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg p-6 border border-gray-100"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex gap-6">
-                    {/* Avatar et informations principales */}
-                    <div className="flex flex-col items-center">
-                      <div className={`p-4 rounded-2xl ${animal.color} mb-3`}>
-                        {animal.type === "Chien" ? (
-                          <Dog className={`w-12 h-12 ${animal.iconColor}`} />
-                        ) : (
-                          <Cat className={`w-12 h-12 ${animal.iconColor}`} />
-                        )}
-                      </div>
-                      <Badge variant="outline" className="bg-white">
-                        {animal.healthStatus}
-                      </Badge>
-                    </div>
-
-                    {/* Informations détaillées */}
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h3 className="text-2xl font-bold text-gray-900">{animal.name}</h3>
-                          <p className="text-gray-500">{animal.breed} • {animal.age}</p>
+            {patients.map((patient) => {
+              const colors = animalColors[patient.species as keyof typeof animalColors] || animalColors.default;
+              return (
+                <motion.div
+                  key={patient.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  whileHover={{ scale: 1.02 }}
+                  className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-lg p-6 border border-gray-100"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex gap-6">
+                      {/* Avatar et informations principales */}
+                      <div className="flex flex-col items-center">
+                        <div className={`p-4 rounded-2xl ${colors.bg} mb-3`}>
+                          {patient.species === "Chien" ? (
+                            <Dog className={`w-12 h-12 ${colors.icon}`} />
+                          ) : (
+                            <Cat className={`w-12 h-12 ${colors.icon}`} />
+                          )}
                         </div>
-                        <div className="flex gap-2">
-                          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-[#4F7AF4]">
-                            <Edit className="w-5 h-5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="text-gray-400 hover:text-red-500">
-                            <Trash2 className="w-5 h-5" />
-                          </Button>
-                        </div>
+                        <Badge variant="outline" className="bg-white">
+                          Bon
+                        </Badge>
                       </div>
 
-                      {/* Statistiques */}
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="bg-[#F8FAFC] p-3 rounded-xl">
-                          <p className="text-sm text-gray-500">Poids</p>
-                          <p className="font-semibold text-gray-900">{animal.weight}</p>
+                      {/* Informations détaillées */}
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h3 className="text-2xl font-bold text-gray-900">{patient.name}</h3>
+                            <p className="text-gray-500">{patient.breed || 'Race non spécifiée'} • {calculateAge(patient.birthDate)}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="ghost" size="icon" className="text-gray-400 hover:text-[#4F7AF4]">
+                              <Edit className="w-5 h-5" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-gray-400 hover:text-red-500"
+                              onClick={() => handleDeleteAnimal(patient.id)}
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="bg-[#F8FAFC] p-3 rounded-xl">
-                          <p className="text-sm text-gray-500">Dernière visite</p>
-                          <p className="font-semibold text-gray-900">{animal.lastVisit}</p>
-                        </div>
-                      </div>
 
-                      {/* Vaccinations */}
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-500 mb-2">Vaccinations</p>
-                        {animal.vaccinations.map((vacc, index) => (
-                          <div key={index} className="flex items-center justify-between bg-[#F8FAFC] p-2 rounded-lg">
-                            <div className="flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-[#4F7AF4]" />
-                              <span className="text-sm text-gray-700">{vacc.name}</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4 text-[#F4A259]" />
-                              <span className="text-xs text-[#F4A259]">Prochain: {vacc.next}</span>
+                        {/* Statistiques */}
+                        <div className="grid grid-cols-2 gap-4 mb-4">
+                          <div className="bg-[#F8FAFC] p-3 rounded-xl">
+                            <p className="text-sm text-gray-500">Espèce</p>
+                            <p className="font-semibold text-gray-900">{patient.species}</p>
+                          </div>
+                          <div className="bg-[#F8FAFC] p-3 rounded-xl">
+                            <p className="text-sm text-gray-500">Date de naissance</p>
+                            <p className="font-semibold text-gray-900">
+                              {patient.birthDate ? new Date(patient.birthDate).toLocaleDateString('fr-FR') : 'Non spécifiée'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Historique médical */}
+                        {patient.medicalHistory && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium text-gray-500 mb-2">Historique médical</p>
+                            <div className="bg-[#F8FAFC] p-3 rounded-lg">
+                              <p className="text-sm text-gray-700">{patient.medicalHistory}</p>
                             </div>
                           </div>
-                        ))}
+                        )}
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Actions */}
-                <div className="flex gap-3 mt-6">
-                  <Button variant="outline" className="flex-1 border-[#4F7AF4] text-[#4F7AF4]">
-                    <HeartPulse className="w-4 h-4 mr-2" /> Historique médical
-                  </Button>
-                  <Button variant="outline" className="flex-1 border-[#4F7AF4] text-[#4F7AF4]">
-                    <Calendar className="w-4 h-4 mr-2" /> Prendre RDV
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
+                  {/* Actions */}
+                  <div className="flex gap-3 mt-6">
+                    <Button variant="outline" className="flex-1 border-[#4F7AF4] text-[#4F7AF4]">
+                      <HeartPulse className="w-4 h-4 mr-2" /> Historique médical
+                    </Button>
+                    <Button variant="outline" className="flex-1 border-[#4F7AF4] text-[#4F7AF4]">
+                      <Calendar className="w-4 h-4 mr-2" /> Prendre RDV
+                    </Button>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </div>

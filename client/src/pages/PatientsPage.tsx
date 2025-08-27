@@ -4,27 +4,27 @@ import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-toastify';
 import { useAppDispatch, useAppSelector } from '@/app/hooks';
-import { fetchPatients, deletePatient, createPatient, updatePatient } from '@/app/reducers/PatientReducer';
-import { Patient, CreatePatientDto } from '@/components/services/types/patient';
+import { fetchPatients, deletePatient, createPatient, updatePatient } from '@/app/reducers/PatientsReducer';
+import { Patient, CreatePatientData } from '@/app/reducers/PatientsReducer';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 
 const PatientsPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const { items: patients, isLoading, error } = useAppSelector(state => state.patients);
+  const { patients, isLoading, error } = useAppSelector(state => state.patients);
   const { user } = useAppSelector(state => state.auth);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
-  const [formData, setFormData] = useState<CreatePatientDto>({
+  const [formData, setFormData] = useState<CreatePatientData>({
     name: '',
     species: '',
     breed: '',
-    birth_date: '',
-    owner_name: '',
-    owner_email: '',
-    owner_phone: '',
-    medical_history: ''
-  });
+    birthDate: '',
+    ownerName: '',
+    ownerPhone: '',
+    medicalHistory: '', 
+    ownerEmail: ''  
+    });
 
   useEffect(() => {
     // Rediriger si l'utilisateur n'est pas un praticien
@@ -53,7 +53,7 @@ const PatientsPage: React.FC = () => {
     e.preventDefault();
     try {
       // Valider les champs requis
-      if (!formData.name || !formData.species || !formData.owner_name || !formData.owner_email) {
+      if (!formData.name || !formData.species || !formData.ownerName) {
         toast.error('Veuillez remplir tous les champs obligatoires');
         return;
       }
@@ -62,13 +62,13 @@ const PatientsPage: React.FC = () => {
       const dataToSend = {
         ...formData,
         // Convertir la date en format ISO si elle existe
-        birth_date: formData.birth_date ? new Date(formData.birth_date).toISOString().split('T')[0] : undefined
+        birthDate: formData.birthDate ? new Date(formData.birthDate).toISOString().split('T')[0] : undefined
       };
 
       console.log('Données du formulaire à envoyer:', dataToSend);
 
       if (editingPatient) {
-        const result = await dispatch(updatePatient({ id: editingPatient.id, data: dataToSend })).unwrap();
+        const result = await dispatch(updatePatient({ id: editingPatient.id, patientData: dataToSend })).unwrap();
         console.log('Réponse de mise à jour:', result);
         toast.success('Patient mis à jour avec succès');
       } else {
@@ -105,11 +105,10 @@ const PatientsPage: React.FC = () => {
       name: patient.name,
       species: patient.species,
       breed: patient.breed || '',
-      birth_date: patient.birth_date || '',
-      owner_name: patient.owner_name,
-      owner_email: patient.owner_email,
-      owner_phone: patient.owner_phone || '',
-      medical_history: patient.medical_history || ''
+      birthDate: patient.birthDate || '',
+      ownerName: patient.ownerName,
+      ownerPhone: patient.ownerPhone || '',
+      medicalHistory: patient.medicalHistory || ''
     });
     setIsModalOpen(true);
   };
@@ -119,11 +118,10 @@ const PatientsPage: React.FC = () => {
       name: '',
       species: '',
       breed: '',
-      birth_date: '',
-      owner_name: '',
-      owner_email: '',
-      owner_phone: '',
-      medical_history: ''
+      birthDate: '',
+      ownerName: '',
+      ownerPhone: '',
+      medicalHistory: ''
     });
     setEditingPatient(null);
   };
@@ -179,31 +177,31 @@ const PatientsPage: React.FC = () => {
                         <div className="mt-2 sm:flex sm:justify-between">
                           <div className="sm:flex">
                             <p className="flex items-center text-sm text-gray-500">
-                              Propriétaire: {patient.owner_name}
+                              Propriétaire: {patient.ownerName}
                             </p>
                             {patient.breed && (
                               <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
                                 Race: {patient.breed}
                               </p>
                             )}
-                            {patient.owner_phone && (
+                            {patient.ownerPhone && (
                               <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
-                                Tél: {patient.owner_phone}
+                                Tél: {patient.ownerPhone}
                               </p>
                             )}
                           </div>
                           <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                            {patient.birth_date && (
+                            {patient.birthDate && (
                               <p>
-                                Né le: {formatDate(patient.birth_date)}
+                                Né le: {formatDate(patient.birthDate)}
                               </p>
                             )}
                           </div>
                         </div>
-                        {patient.medical_history && (
+                        {patient.medicalHistory && (
                           <div className="mt-2">
                             <p className="text-sm text-gray-500">
-                              Historique médical: {patient.medical_history}
+                              Historique médical: {patient.medicalHistory}
                             </p>
                           </div>
                         )}
@@ -293,23 +291,23 @@ const PatientsPage: React.FC = () => {
                         </label>
                         <input
                           type="date"
-                          name="birth_date"
-                          id="birth_date"
-                          value={formData.birth_date}
+                          name="birthDate"
+                          id="birthDate"
+                          value={formData.birthDate}
                           onChange={handleInputChange}
                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         />
                       </div>
 
                       <div className="sm:col-span-6">
-                        <label htmlFor="owner_name" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="ownerName" className="block text-sm font-medium text-gray-700">
                           Nom du propriétaire
                         </label>
                         <input
                           type="text"
-                          name="owner_name"
-                          id="owner_name"
-                          value={formData.owner_name}
+                          name="ownerName"
+                          id="ownerName"
+                          value={formData.ownerName}
                           onChange={handleInputChange}
                           required
                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
@@ -317,14 +315,14 @@ const PatientsPage: React.FC = () => {
                       </div>
 
                       <div className="sm:col-span-4">
-                        <label htmlFor="owner_email" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="ownerEmail" className="block text-sm font-medium text-gray-700">
                           Email du propriétaire
                         </label>
                         <input
                           type="email"
-                          name="owner_email"
-                          id="owner_email"
-                          value={formData.owner_email}
+                          name="ownerEmail"
+                          id="ownerEmail"
+                          value={formData.ownerEmail}
                           onChange={handleInputChange}
                           required
                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
@@ -332,28 +330,28 @@ const PatientsPage: React.FC = () => {
                       </div>
 
                       <div className="sm:col-span-2">
-                        <label htmlFor="owner_phone" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="ownerPhone" className="block text-sm font-medium text-gray-700">
                           Téléphone
                         </label>
                         <input
                           type="tel"
-                          name="owner_phone"
-                          id="owner_phone"
-                          value={formData.owner_phone}
+                          name="ownerPhone"
+                          id="ownerPhone"
+                          value={formData.ownerPhone}
                           onChange={handleInputChange}
                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         />
                       </div>
 
                       <div className="sm:col-span-6">
-                        <label htmlFor="medical_history" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="medicalHistory" className="block text-sm font-medium text-gray-700">
                           Historique médical
                         </label>
                         <textarea
-                          name="medical_history"
-                          id="medical_history"
+                          name="medicalHistory"
+                          id="medicalHistory"
                           rows={3}
-                          value={formData.medical_history}
+                          value={formData.medicalHistory}
                           onChange={handleInputChange}
                           className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         />

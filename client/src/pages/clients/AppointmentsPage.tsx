@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Calendar,
@@ -20,55 +20,94 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from '@/components/ui/tooltip';
 import { useNavigate } from 'react-router-dom';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { fetchConsultations } from '@/app/reducers/ConsultationReducer';
+import { format, parseISO } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
-// Données de test pour les rendez-vous
-const appointments = [
-  {
-    id: 1,
-    date: "14 juin 2024",
-    time: "16:30",
-    type: "Téléconsultation",
-    status: "confirmé",
-    vet: {
-      name: "Dr. Martin",
-      specialty: "Vétérinaire généraliste",
-      avatar: null
-    },
-    animal: "Médor",
-    reason: "Suivi post-opératoire"
-  },
-  {
-    id: 2,
-    date: "18 juin 2024",
-    time: "10:00",
-    type: "Consultation physique",
-    status: "en attente",
-    vet: {
-      name: "Dr. Dupont",
-      specialty: "Dermatologie",
-      avatar: null
-    },
-    animal: "Félix",
-    reason: "Problème de peau"
-  },
-  {
-    id: 3,
-    date: "20 juin 2024",
-    time: "14:15",
-    type: "Téléconsultation",
-    status: "confirmé",
-    vet: {
-      name: "Dr. Bernard",
-      specialty: "Vétérinaire généraliste",
-      avatar: null
-    },
-    animal: "Luna",
-    reason: "Vaccination annuelle"
+// Fonction utilitaire pour formater la date
+const formatDate = (dateString: string) => {
+  try {
+    return format(parseISO(dateString), 'dd MMMM yyyy', { locale: fr });
+  } catch {
+    return dateString;
   }
-];
+};
+
+// Fonction utilitaire pour obtenir le statut en français
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return 'en attente';
+    case 'completed':
+      return 'terminé';
+    case 'cancelled':
+      return 'annulé';
+    default:
+      return status;
+  }
+};
+
+// Fonction utilitaire pour obtenir la couleur du badge selon le statut
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'pending':
+      return 'bg-[#F4A259]';
+    case 'completed':
+      return 'bg-[#4F7AF4]';
+    case 'cancelled':
+      return 'bg-gray-500';
+    default:
+      return 'bg-gray-400';
+  }
+};
 
 const AppointmentsPage = () => {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const { consultations, isLoading, error } = useAppSelector(state => state.consultations);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    dispatch(fetchConsultations());
+  }, [dispatch]);
+
+  // Filtrer les consultations selon la recherche
+  const filteredConsultations = consultations.filter(consultation => 
+    (consultation.patient?.name || consultation.patientName || '')?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    consultation.notes?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    consultation.type?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Calculer le prochain rendez-vous
+  const nextAppointment = consultations
+    .filter(c => c.status === 'pending' && new Date(c.date) > new Date())
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+
+  const daysUntilNext = nextAppointment 
+    ? Math.ceil((new Date(nextAppointment.date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] via-[#FDE7EF]/40 to-[#E6F0FD] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-[#F4A259] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Chargement des rendez-vous...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#F8FAFC] via-[#FDE7EF]/40 to-[#E6F0FD] flex items-center justify-center">
+        <div className="text-center text-red-600 bg-red-50 p-6 rounded-xl">
+          <p>Erreur lors du chargement : {error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <TooltipProvider>
@@ -102,17 +141,21 @@ const AppointmentsPage = () => {
                   </p>
                 </div>
                 <div className="flex flex-col md:flex-row items-center gap-4">
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="hidden md:block"
-                  >
-                    <div className="flex items-center gap-2 bg-[#F4A259]/10 p-3 rounded-xl">
-                      <div className="w-2 h-2 rounded-full bg-[#F4A259] animate-pulse" />
-                      <span className="text-[#F4A259] font-medium">Prochain RDV dans 2 jours</span>
-                    </div>
-                  </motion.div>
+                  {daysUntilNext && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.3 }}
+                      className="hidden md:block"
+                    >
+                      <div className="flex items-center gap-2 bg-[#F4A259]/10 p-3 rounded-xl">
+                        <div className="w-2 h-2 rounded-full bg-[#F4A259] animate-pulse" />
+                        <span className="text-[#F4A259] font-medium">
+                          Prochain RDV dans {daysUntilNext} jour{daysUntilNext > 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </motion.div>
+                  )}
                   <Button
                     className="bg-gradient-to-r from-[#4F7AF4] to-[#F44F7A] text-white font-bold rounded-xl shadow hover:shadow-lg transition-all px-6 py-3"
                     onClick={() => navigate('/book-appointment')}
@@ -128,18 +171,33 @@ const AppointmentsPage = () => {
           <div className="flex gap-4 mb-8">
             <div className="flex-1 flex items-center gap-2 bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100">
               <Search className="w-5 h-5 text-[#F4A259]" />
-              <input type="text" placeholder="Rechercher un rendez-vous..." className="bg-transparent outline-none text-gray-700 w-full" />
+              <input 
+                type="text" 
+                placeholder="Rechercher un rendez-vous..." 
+                className="bg-transparent outline-none text-gray-700 w-full"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
             <Button variant="outline" className="flex items-center gap-2">
               <Filter className="w-5 h-5" /> Filtres
             </Button>
           </div>
 
+          {/* Message si aucun rendez-vous */}
+          {filteredConsultations.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-lg">
+                {searchTerm ? 'Aucun rendez-vous trouvé pour cette recherche' : 'Aucun rendez-vous pour le moment'}
+              </p>
+            </div>
+          )}
+
           {/* Liste des rendez-vous */}
           <div className="grid grid-cols-1 gap-6">
-            {appointments.map((appointment) => (
+            {filteredConsultations.map((consultation) => (
               <motion.div
-                key={appointment.id}
+                key={consultation.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 whileHover={{ scale: 1.02 }}
@@ -150,35 +208,39 @@ const AppointmentsPage = () => {
                     {/* Date et heure */}
                     <div className="flex flex-col items-center justify-center bg-[#EAF1FF] rounded-2xl p-4 min-w-[100px]">
                       <Calendar className="w-6 h-6 text-[#4F7AF4] mb-2" />
-                      <span className="text-sm font-medium text-[#4F7AF4]">{appointment.date}</span>
-                      <span className="text-lg font-bold text-[#4F7AF4]">{appointment.time}</span>
+                      <span className="text-sm font-medium text-[#4F7AF4]">{formatDate(consultation.date)}</span>
+                      <span className="text-lg font-bold text-[#4F7AF4]">{consultation.time}</span>
                     </div>
 
                     {/* Informations du rendez-vous */}
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-bold text-gray-900">{appointment.type}</h3>
-                        <Badge variant={appointment.status === "confirmé" ? "default" : "secondary"}
-                               className={appointment.status === "confirmé" ? "bg-[#3CB371]" : "bg-[#F4A259]"}>
-                          {appointment.status}
-                        </Badge>
+                        <h3 className="text-xl font-bold text-gray-900">{consultation.type}</h3>
+                          <Badge variant="default" className={getStatusColor(consultation.status)}>
+                            {getStatusLabel(consultation.status)}
+                          </Badge>
                       </div>
-                      <p className="text-gray-600 mb-4">{appointment.reason}</p>
+                      <p className="text-gray-600 mb-4">{consultation.notes || 'Aucune note'}</p>
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
                           <Avatar className="w-8 h-8">
-                            <AvatarImage src={appointment.vet.avatar || undefined} />
-                            <AvatarFallback>{appointment.vet.name[0]}</AvatarFallback>
+                            <AvatarFallback>
+                              {consultation.practitioner?.user?.name?.[0] || 'V'}
+                            </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium text-gray-900">{appointment.vet.name}</p>
-                            <p className="text-sm text-gray-500">{appointment.vet.specialty}</p>
+                            <p className="font-medium text-gray-900">
+                              Dr. {consultation.practitioner?.user?.name || 'Vétérinaire'}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {consultation.practitioner?.speciality || 'Vétérinaire généraliste'}
+                            </p>
                           </div>
                         </div>
                         <Separator orientation="vertical" className="h-8" />
                         <div className="flex items-center gap-2">
                           <PawPrint className="w-5 h-5 text-[#F4A259]" />
-                          <span className="text-gray-700">{appointment.animal}</span>
+                          <span className="text-gray-700">{consultation.patient?.name || consultation.patientName || 'Patient inconnu'}</span>
                         </div>
                       </div>
                     </div>
@@ -186,7 +248,7 @@ const AppointmentsPage = () => {
 
                   {/* Actions */}
                   <div className="flex flex-col items-end gap-3">
-                    {appointment.type === "Téléconsultation" ? (
+                    {consultation.type === "Téléconsultation" ? (
                       <Button className="bg-gradient-to-r from-[#4F7AF4] to-[#F44F7A] text-white">
                         <Video className="w-5 h-5 mr-2" /> Rejoindre
                       </Button>

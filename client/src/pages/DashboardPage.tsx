@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { Navigate } from "react-router-dom";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import {
   Video,
@@ -20,6 +21,8 @@ import {
   fetchConsultations,
   fetchConsultationStats,
 } from "@/app/reducers/ConsultationReducer";
+import { fetchPatients } from "@/app/reducers/PatientsReducer";
+import { fetchPrescriptions } from "@/app/reducers/PrescriptionsReducer";
 import { motion } from "framer-motion";
 import PetCharacter from "@/assets/images/pet_character.svg";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -35,41 +38,31 @@ import {
 import { Separator } from "@/components/ui/separator";
 import SidebarClients from "@/components/core/clients/SidebarClients";
 
-const prescriptions = [
-  { name: "Antibiotique - Médor", desc: "Dr. Martin • 12/06/2024" },
-  { name: "Vermifuge - Félix", desc: "Dr. Dupont • 05/06/2024" },
-  { name: "Anti-puce - Rex", desc: "Dr. Martin • 28/05/2024" },
-  { name: "Anti-inflammatoire - Luna", desc: "Dr. Bernard • 20/05/2024" },
-];
 
-const nextAppointment = {
-  date: "Vendredi 14 juin 2024",
-  hour: "16:30",
-  vet: "Dr. Martin",
-  animal: "Médor",
-  type: "Consultation vidéo",
+
+// Fonction utilitaire pour formater la date en français
+const formatNextAppointmentDate = (dateString: string) => {
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  } catch {
+    return 'Date non définie';
+  }
 };
 
-const animals = [
-  {
-    name: "Médor",
-    type: "Chien",
-    color: "bg-[#EAF1FF]",
-    iconColor: "text-[#7A90C3]",
-  },
-  {
-    name: "Félix",
-    type: "Chat",
-    color: "bg-[#FFF6E9]",
-    iconColor: "text-[#F4A259]",
-  },
-  {
-    name: "Luna",
-    type: "Chat",
-    color: "bg-[#F3E6FD]",
-    iconColor: "text-[#A259F4]",
-  },
-];
+// Couleurs pour les types d'animaux
+const animalColors = {
+  "Chien": { bg: "bg-[#EAF1FF]", icon: "text-[#7A90C3]" },
+  "Chat": { bg: "bg-[#FFF6E9]", icon: "text-[#F4A259]" },
+  "Lapin": { bg: "bg-[#F3E6FD]", icon: "text-[#A259F4]" },
+  "Oiseau": { bg: "bg-[#E6F7E6]", icon: "text-[#3CB371]" },
+  "default": { bg: "bg-[#F0F0F0]", icon: "text-[#666666]" }
+};
 
 const sidebarIcons = [
   { icon: PawPrint, path: "/", label: "Dashboard" },
@@ -84,9 +77,11 @@ const DashboardPage = () => {
   const {
     consultations,
     stats: serverStats,
-    isLoading,
-    error,
+    isLoading: consultationsLoading,
+    error: consultationsError,
   } = useAppSelector((state) => state.consultations);
+  const { patients, isLoading: patientsLoading, error: patientsError } = useAppSelector((state) => state.patients);
+  const { prescriptions: prescriptionsData, isLoading: prescriptionsLoading, error: prescriptionsError } = useAppSelector((state) => state.prescriptions);
   const { user } = useAppSelector((state) => state.auth);
 
   const quickActions = [
@@ -141,10 +136,29 @@ const DashboardPage = () => {
 
   useEffect(() => {
     dispatch(fetchConsultations());
+    dispatch(fetchPatients());
+    dispatch(fetchPrescriptions());
     if (user?.role_id === 2) {
       dispatch(fetchConsultationStats());
     }
   }, [dispatch, user?.role_id]);
+
+  // Calculer le prochain rendez-vous depuis les consultations
+  const nextAppointment = consultations
+    .filter(c => c.status === 'pending' && new Date(c.date) > new Date())
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+
+  // Créer la liste des animaux depuis les patients
+  const animals = patients.map(patient => {
+    const colors = animalColors[patient.species as keyof typeof animalColors] || animalColors.default;
+    return {
+      id: patient.id,
+      name: patient.name,
+      type: patient.species,
+      color: colors.bg,
+      iconColor: colors.icon,
+    };
+  });
 
   // Date du jour en français
   const today = new Date();
@@ -155,7 +169,12 @@ const DashboardPage = () => {
     day: "numeric",
   });
 
-  if (isLoading) {
+  // Rediriger les praticiens vers leur dashboard
+  if (user?.role_id === 2) {
+    return <Navigate to="/practitioner/dashboard" replace />;
+  }
+
+  if (consultationsLoading || patientsLoading || prescriptionsLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
         <motion.div
@@ -167,11 +186,11 @@ const DashboardPage = () => {
     );
   }
 
-  if (error) {
+  if (consultationsError || patientsError || prescriptionsError) {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-red-600 bg-red-50 p-4 rounded-xl shadow-sm">
-          Une erreur est survenue lors du chargement des données: {error}
+          Une erreur est survenue lors du chargement des données: {consultationsError || patientsError || prescriptionsError}
         </div>
       </div>
     );
@@ -292,7 +311,7 @@ const DashboardPage = () => {
                 </h2>
                 <p className="text-lg text-[#4F7AF4] mb-6">
                   Prenez rendez-vous en quelques clics pour votre animal, où que
-                  vous soyez. Consultation vidéo, suivi sécurisé, conseils
+                  vous soyez. Téléconsultation, suivi sécurisé, conseils
                   personnalisés.
                 </p>
                 <div className="flex items-center gap-4">
@@ -351,20 +370,36 @@ const DashboardPage = () => {
                   <span className="text-xs text-gray-400">À venir</span>
                 </div>
                 <div className="flex-1 flex flex-col justify-center items-start mt-2">
-                  <span className="text-lg font-bold text-[#7A90C3] mb-1">
-                    {nextAppointment.date} à {nextAppointment.hour}
-                  </span>
-                  <span className="text-base text-gray-700">
-                    Avec <b>{nextAppointment.vet}</b> pour{" "}
-                    <b>{nextAppointment.animal}</b>
-                  </span>
-                  <span className="text-sm text-gray-500 mt-2">
-                    {nextAppointment.type}
-                  </span>
-                  <Button className="mt-6 px-6 py-3 bg-gradient-to-r from-[#7A90C3] to-[#F4A259] text-white font-bold rounded-xl shadow hover:shadow-lg transition-all text-base flex items-center gap-2" onClick={() => navigate('/join-consultation')}>
-                    <Video className="w-5 h-5 mr-1" /> Rejoindre la
-                    téléconsultation
-                  </Button>
+                  {nextAppointment ? (
+                    <>
+                      <span className="text-lg font-bold text-[#7A90C3] mb-1">
+                        {formatNextAppointmentDate(nextAppointment.date)} à {nextAppointment.time}
+                      </span>
+                      <span className="text-base text-gray-700">
+                        Avec <b>Dr. {nextAppointment.practitioner?.user?.name || 'Vétérinaire'}</b> pour{" "}
+                        <b>{nextAppointment.patient?.name || nextAppointment.patientName || 'Patient'}</b>
+                      </span>
+                      <span className="text-sm text-gray-500 mt-2">
+                        {nextAppointment.type}
+                      </span>
+                      <Button className="mt-6 px-6 py-3 bg-gradient-to-r from-[#7A90C3] to-[#F4A259] text-white font-bold rounded-xl shadow hover:shadow-lg transition-all text-base flex items-center gap-2" onClick={() => navigate('/join-consultation')}>
+                        <Video className="w-5 h-5 mr-1" /> Rejoindre la
+                        téléconsultation
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-lg font-bold text-[#7A90C3] mb-1">
+                        Aucun rendez-vous à venir
+                      </span>
+                      <span className="text-base text-gray-700">
+                        Prenez rendez-vous pour votre animal
+                      </span>
+                      <Button className="mt-6 px-6 py-3 bg-gradient-to-r from-[#7A90C3] to-[#F4A259] text-white font-bold rounded-xl shadow hover:shadow-lg transition-all text-base flex items-center gap-2" onClick={() => navigate('/book-appointment')}>
+                        <Calendar className="w-5 h-5 mr-1" /> Prendre rendez-vous
+                      </Button>
+                    </>
+                  )}
                 </div>
                 {/* Badge aujourd'hui si besoin */}
                 {/* <Badge variant="secondary" className="absolute top-6 right-8 bg-[#F44F7A] text-white px-3 py-1 rounded-full">Aujourd'hui</Badge> */}
@@ -407,7 +442,8 @@ const DashboardPage = () => {
                       scale: 1.07,
                       boxShadow: "0 4px 24px #F4A25933",
                     }}
-                    className="flex flex-col items-center justify-center p-4 rounded-2xl shadow bg-white min-w-[110px] min-h-[120px] border-2 border-dashed border-[#F4A259] hover:bg-[#F4A259]/10 transition-all"
+                    onClick={() => navigate('/patients')}
+                    className="flex flex-col items-center justify-center p-4 rounded-2xl shadow bg-white min-w-[110px] min-h-[120px] border-2 border-dashed border-[#F4A259] hover:bg-[#F4A259]/10 transition-all cursor-pointer"
                     style={{ flex: "1 1 110px", maxWidth: "120px" }}
                   >
                     <Plus className="w-8 h-8 mb-2 text-[#F4A259]" />
@@ -434,30 +470,38 @@ const DashboardPage = () => {
                 <h3 className="text-xl font-bold text-[#7A90C3]">
                   Mes ordonnances
                 </h3>
-                <a
-                  href="#"
-                  className="text-[#7A90C3] text-base font-medium hover:underline"
+                <button
+                  onClick={() => navigate('/prescriptions')}
+                  className="text-[#7A90C3] text-base font-medium hover:underline cursor-pointer"
                 >
                   Tout voir
-                </a>
+                </button>
               </div>
               <div className="flex flex-col gap-4">
-                {prescriptions.map((presc, idx) => (
-                  <div
-                    key={idx}
-                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-[#7A90C3]/10 transition-colors"
-                  >
-                    <div className="w-12 h-12 rounded-lg bg-[#7A90C3]/20 flex items-center justify-center">
-                      <Pill className="w-6 h-6 text-[#7A90C3]" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900 text-base">
-                        {presc.name}
-                      </p>
-                      <p className="text-sm text-[#7A90C3]">{presc.desc}</p>
-                    </div>
+                {prescriptionsData.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-gray-500">Aucune ordonnance</p>
                   </div>
-                ))}
+                ) : (
+                  prescriptionsData.slice(0, 4).map((presc, idx) => (
+                    <div
+                      key={presc.id}
+                      className="flex items-center gap-4 p-3 rounded-xl hover:bg-[#7A90C3]/10 transition-colors"
+                    >
+                      <div className="w-12 h-12 rounded-lg bg-[#7A90C3]/20 flex items-center justify-center">
+                        <Pill className="w-6 h-6 text-[#7A90C3]" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900 text-base">
+                          {presc.items[0]?.medication_name || 'Médicament'} - {presc.patient?.name || 'Patient'}
+                        </p>
+                        <p className="text-sm text-[#7A90C3]">
+                          {presc.practitioner?.name || 'Dr.'} • {new Date(presc.prescription_date + 'T00:00:00').toLocaleDateString('fr-FR')}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </Card>
 

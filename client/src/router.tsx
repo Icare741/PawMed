@@ -20,6 +20,13 @@ import PatientsPage from './pages/clients/PatientsPage';
 import ConsultationsPage from './pages/ConsultationsPage';
 import BookingPage from './pages/BookingPage';
 import AppointmentsPage from './pages/clients/AppointmentsPage';
+import PractitionerDashboardPage from './pages/practitioners/PractitionerDashboardPage';
+import PractitionerConsultationsPage from './pages/practitioners/ConsultationsPage';
+import PractitionerPatientsPage from './pages/practitioners/PatientsPage';
+import PractitionerPrescriptionsPage from './pages/practitioners/PrescriptionsPage';
+import PractitionerDocumentsPage from './pages/practitioners/DocumentsPage';
+import RoleGuard from './components/core/guards/RoleGuard';
+import PatientGuard from './components/core/guards/PatientGuard';
 import UrgenceChien from './pages/articles/UrgenceChien';
 import HygieneDentaireChat from './pages/articles/HygieneDentaireChat';
 import StressLapin from './pages/articles/StressLapin';
@@ -29,6 +36,7 @@ import HealthAdvicePage from './pages/clients/HealthAdvicePage';
 import PrescriptionsPage from './pages/clients/PrescriptionsPage';
 import DocumentsPage from './pages/clients/DocumentsPage';
 import JoinConsultationPage from './pages/clients/JoinConsultationPage';
+import EditPrescriptionPage from './pages/practitioners/EditPrescriptionPage';
 
 const stripePromise = loadStripe(
   'pk_test_51O5unuFEj403Phjgbi9HfcgZSe8NW3jkyu9L47FNAx8dwXknEndmFqYhlmqo2BksV1Uwsv1rfo0s3ZeeZgQYuxSn00P9W9WRNc'
@@ -138,9 +146,11 @@ export const AppRoutes = () => {
         path="/patients"
         element={
           <AuthGuard>
-            <Layout>
-              <PatientsPage />
-            </Layout>
+            <PatientGuard>
+              <Layout>
+                <PatientsPage />
+              </Layout>
+            </PatientGuard>
           </AuthGuard>
         }
       />
@@ -148,9 +158,11 @@ export const AppRoutes = () => {
         path="/consultations"
         element={
           <AuthGuard>
-            <Layout>
-              <ConsultationsPage />
-            </Layout>
+            <PatientGuard>
+              <Layout>
+                <ConsultationsPage />
+              </Layout>
+            </PatientGuard>
           </AuthGuard>
         }
       />
@@ -182,9 +194,11 @@ export const AppRoutes = () => {
         path="/health-advice"
         element={
           <AuthGuard>
-            <Layout>
-              <HealthAdvicePage />
-            </Layout>
+            <PatientGuard>
+              <Layout>
+                <HealthAdvicePage />
+              </Layout>
+            </PatientGuard>
           </AuthGuard>
         }
       />
@@ -192,9 +206,11 @@ export const AppRoutes = () => {
         path="/prescriptions"
         element={
           <AuthGuard>
-            <Layout>
-              <PrescriptionsPage />
-            </Layout>
+            <PatientGuard>
+              <Layout>
+                <PrescriptionsPage />
+              </Layout>
+            </PatientGuard>
           </AuthGuard>
         }
       />
@@ -202,9 +218,11 @@ export const AppRoutes = () => {
         path="/documents"
         element={
           <AuthGuard>
-            <Layout>
-              <DocumentsPage />
-            </Layout>
+            <PatientGuard>
+              <Layout>
+                <DocumentsPage />
+              </Layout>
+            </PatientGuard>
           </AuthGuard>
         }
       />
@@ -215,6 +233,68 @@ export const AppRoutes = () => {
             <Layout>
               <JoinConsultationPage />
             </Layout>
+          </AuthGuard>
+        }
+      />
+      
+      {/* Routes pour les praticiens */}
+      <Route
+        path="/practitioner/dashboard"
+        element={
+          <AuthGuard>
+            <RoleGuard allowedRoles={[2]}>
+              <PractitionerDashboardPage />
+            </RoleGuard>
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/practitioner/consultations"
+        element={
+          <AuthGuard>
+            <RoleGuard allowedRoles={[2]}>
+              <PractitionerConsultationsPage />
+            </RoleGuard>
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/practitioner/patients"
+        element={
+          <AuthGuard>
+            <RoleGuard allowedRoles={[2]}>
+              <PractitionerPatientsPage />
+            </RoleGuard>
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/practitioner/prescriptions"
+        element={
+          <AuthGuard>
+            <RoleGuard allowedRoles={[2]}>
+              <PractitionerPrescriptionsPage />
+            </RoleGuard>
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/practitioner/prescriptions/:id/edit"
+        element={
+          <AuthGuard>
+            <RoleGuard allowedRoles={[2]}>
+              <EditPrescriptionPage />
+            </RoleGuard>
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/practitioner/documents"
+        element={
+          <AuthGuard>
+            <RoleGuard allowedRoles={[2]}>
+              <PractitionerDocumentsPage />
+            </RoleGuard>
           </AuthGuard>
         }
       />

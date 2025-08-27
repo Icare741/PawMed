@@ -7,7 +7,7 @@ export const fetchConsultations = createAsyncThunk(
   'consultations/fetch',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.get('/consultations');
+      const response = await axiosInstance.get('/api/consultations');
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Erreur lors du chargement des consultations');
@@ -19,7 +19,7 @@ export const fetchConsultationStats = createAsyncThunk(
   'consultations/fetchStats',
   async (_, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.get('/consultations/stats');
+      const response = await axiosInstance.get('/api/consultations/stats');
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Erreur lors du chargement des statistiques');
@@ -31,7 +31,7 @@ export const createConsultation = createAsyncThunk(
   'consultations/create',
   async (data: any, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.post('/consultations', data);
+      const response = await axiosInstance.post('/api/consultations', data);
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Erreur lors de la création de la consultation');
@@ -43,10 +43,22 @@ export const updateConsultation = createAsyncThunk(
   'consultations/update',
   async ({ id, data }: { id: number; data: any }, { rejectWithValue }) => {
     try {
-      const response = await axiosInstance.put(`/consultations/${id}`, data);
+      const response = await axiosInstance.put(`/api/consultations/${id}`, data);
       return response.data;
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Erreur lors de la mise à jour de la consultation');
+    }
+  }
+);
+
+export const deleteConsultation = createAsyncThunk(
+  'consultations/delete',
+  async (id: number, { rejectWithValue }) => {
+    try {
+      await axiosInstance.delete(`/api/consultations/${id}`);
+      return id;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Erreur lors de la suppression de la consultation');
     }
   }
 );

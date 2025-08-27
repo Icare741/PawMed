@@ -11,9 +11,32 @@ export default class PatientsController {
         return response.unauthorized({ message: 'Non autorisé' })
       }
 
+      // Si c'est un praticien, récupérer ses patients (ceux avec qui il a eu des consultations)
+      if (user.roleId === 2) {
+        const patients = await Patient.query()
+          .whereHas('consultations', (query) => {
+            query.whereHas('practitioner', (practitionerQuery) => {
+              practitionerQuery.where('user_id', user.id)
+            })
+          })
+          .orderBy('name', 'asc')
+          .preload('consultations', (query) => {
+            query.whereHas('practitioner', (practitionerQuery) => {
+              practitionerQuery.where('user_id', user.id)
+            }).orderBy('date', 'desc').limit(5)
+          })
+          .distinct()
+
+        return response.ok(patients)
+      }
+
+      // Sinon, récupérer tous les patients de l'utilisateur connecté (propriétaire)
       const patients = await Patient.query()
-        .orderBy('created_at', 'desc')
-        .preload('consultations')
+        .where('ownerEmail', user.email)
+        .orderBy('name', 'asc')
+        .preload('consultations', (query) => {
+          query.orderBy('date', 'desc').limit(5)
+        })
 
       return response.ok(patients)
     } catch (error) {
@@ -22,53 +45,31 @@ export default class PatientsController {
     }
   }
 
-  public async store({ request, auth, response }: HttpContextContract) {
+  // Nouvelle méthode pour que les praticiens puissent voir tous les patients disponibles
+  public async allForPractitioner({ auth, response }: HttpContextContract) {
     try {
       const user = auth.user
       if (!user) {
         return response.unauthorized({ message: 'Non autorisé' })
       }
 
-      console.log('Données reçues:', request.all())
-
-      const validationSchema = schema.create({
-        name: schema.string({ trim: true }, [rules.required()]),
-        species: schema.string({ trim: true }, [rules.required()]),
-        breed: schema.string.optional({ trim: true }),
-        birth_date: schema.date.optional({
-          format: 'yyyy-MM-dd',
-        }),
-        owner_name: schema.string({ trim: true }, [rules.required()]),
-        owner_email: schema.string({ trim: true }, [rules.required(), rules.email()]),
-        owner_phone: schema.string.optional({ trim: true }),
-        medical_history: schema.string.optional({ trim: true })
-      })
-
-      const validated = await request.validate({ schema: validationSchema })
-      console.log('Données validées:', validated)
-
-      const patient = await Patient.create({
-        name: validated.name,
-        species: validated.species,
-        breed: validated.breed,
-        birthDate: validated.birth_date,
-        ownerName: validated.owner_name,
-        ownerEmail: validated.owner_email,
-        ownerPhone: validated.owner_phone,
-        medicalHistory: validated.medical_history
-      })
-      console.log('Patient créé:', patient.toJSON())
-
-      return response.created(patient)
-    } catch (error) {
-      console.error('Erreur détaillée dans store:', error)
-      if (error.code === 'E_VALIDATION_FAILURE') {
-        return response.badRequest({
-          message: 'Erreur de validation',
-          errors: error.messages
-        })
+      if (user.roleId !== 2) {
+        return response.forbidden({ message: 'Accès réservé aux praticiens' })
       }
-      return response.internalServerError({ message: 'Une erreur est survenue lors de la création du patient' })
+
+      // Récupérer tous les patients disponibles pour le praticien
+      const patients = await Patient.query()
+        .orderBy('name', 'asc')
+        .preload('consultations', (query) => {
+          query.whereHas('practitioner', (practitionerQuery) => {
+            practitionerQuery.where('user_id', user.id)
+          }).orderBy('date', 'desc')
+        })
+
+      return response.ok(patients)
+    } catch (error) {
+      console.error('Erreur dans allForPractitioner:', error)
+      return response.internalServerError({ message: 'Une erreur est survenue lors de la récupération des patients' })
     }
   }
 
@@ -81,13 +82,58 @@ export default class PatientsController {
 
       const patient = await Patient.query()
         .where('id', params.id)
-        .preload('consultations')
-        .firstOrFail()
+        .where('ownerEmail', user.email)
+        .preload('consultations', (query) => {
+          query.orderBy('date', 'desc')
+        })
+        .first()
+
+      if (!patient) {
+        return response.notFound({ message: 'Patient non trouvé' })
+      }
 
       return response.ok(patient)
     } catch (error) {
       console.error('Erreur dans show:', error)
-      return response.notFound({ message: 'Patient non trouvé' })
+      return response.internalServerError({ message: 'Une erreur est survenue lors de la récupération du patient' })
+    }
+  }
+
+  public async store({ request, auth, response }: HttpContextContract) {
+    try {
+      const user = auth.user
+      if (!user) {
+        return response.unauthorized({ message: 'Non autorisé' })
+      }
+
+      // Validation des données
+      const patientSchema = schema.create({
+        name: schema.string({ trim: true }, [rules.minLength(2), rules.maxLength(50)]),
+        species: schema.string({ trim: true }, [rules.minLength(2), rules.maxLength(30)]),
+        breed: schema.string.optional({ trim: true }, [rules.maxLength(50)]),
+        birthDate: schema.string.optional(), // Changé de schema.date.optional() à schema.string.optional()
+        ownerName: schema.string({ trim: true }, [rules.minLength(2), rules.maxLength(100)]),
+        ownerPhone: schema.string.optional({ trim: true }, [rules.maxLength(20)]),
+        medicalHistory: schema.string.optional({ trim: true })
+      })
+
+      const payload = await request.validate({ schema: patientSchema })
+
+      // Créer le patient
+      const patient = await Patient.create({
+        ...payload,
+        birthDate: payload.birthDate ? DateTime.fromISO(payload.birthDate) : null,
+        ownerEmail: user.email, // Forcer l'email de l'utilisateur connecté
+        userId: user.id
+      })
+
+      return response.created(patient)
+    } catch (error) {
+      console.error('Erreur dans store:', error)
+      if (error.messages) {
+        return response.badRequest({ message: 'Données invalides', errors: error.messages })
+      }
+      return response.internalServerError({ message: 'Une erreur est survenue lors de la création du patient' })
     }
   }
 
@@ -98,37 +144,38 @@ export default class PatientsController {
         return response.unauthorized({ message: 'Non autorisé' })
       }
 
-      const validationSchema = schema.create({
-        name: schema.string.optional({ trim: true }),
-        species: schema.string.optional({ trim: true }),
-        breed: schema.string.optional({ trim: true }),
-        birth_date: schema.date.optional(),
-        owner_name: schema.string.optional({ trim: true }),
-        owner_email: schema.string.optional({ trim: true }, [rules.email()]),
-        owner_phone: schema.string.optional({ trim: true }),
-        medical_history: schema.string.optional({ trim: true })
+      // Vérifier que le patient appartient à l'utilisateur
+      const patient = await Patient.query()
+        .where('id', params.id)
+        .where('ownerEmail', user.email)
+        .first()
+
+      if (!patient) {
+        return response.notFound({ message: 'Patient non trouvé' })
+      }
+
+      // Validation des données
+      const patientSchema = schema.create({
+        name: schema.string.optional({ trim: true }, [rules.minLength(2), rules.maxLength(50)]),
+        species: schema.string.optional({ trim: true }, [rules.minLength(2), rules.maxLength(30)]),
+        breed: schema.string.optional({ trim: true }, [rules.maxLength(50)]),
+        birthDate: schema.date.optional(),
+        ownerName: schema.string.optional({ trim: true }, [rules.minLength(2), rules.maxLength(100)]),
+        ownerPhone: schema.string.optional({ trim: true }, [rules.maxLength(20)]),
+        medicalHistory: schema.string.optional({ trim: true })
       })
 
-      const validated = await request.validate({ schema: validationSchema })
-      const patient = await Patient.findOrFail(params.id)
+      const payload = await request.validate({ schema: patientSchema })
 
-      patient.merge({
-        name: validated.name,
-        species: validated.species,
-        breed: validated.breed,
-        birthDate: validated.birth_date,
-        ownerName: validated.owner_name,
-        ownerEmail: validated.owner_email,
-        ownerPhone: validated.owner_phone,
-        medicalHistory: validated.medical_history
-      })
+      // Mettre à jour le patient
+      patient.merge(payload)
       await patient.save()
 
       return response.ok(patient)
     } catch (error) {
       console.error('Erreur dans update:', error)
-      if (error.code === 'E_VALIDATION_FAILURE') {
-        return response.badRequest(error.messages)
+      if (error.messages) {
+        return response.badRequest({ message: 'Données invalides', errors: error.messages })
       }
       return response.internalServerError({ message: 'Une erreur est survenue lors de la mise à jour du patient' })
     }
@@ -141,10 +188,20 @@ export default class PatientsController {
         return response.unauthorized({ message: 'Non autorisé' })
       }
 
-      const patient = await Patient.findOrFail(params.id)
+      // Vérifier que le patient appartient à l'utilisateur
+      const patient = await Patient.query()
+        .where('id', params.id)
+        .where('ownerEmail', user.email)
+        .first()
+
+      if (!patient) {
+        return response.notFound({ message: 'Patient non trouvé' })
+      }
+
+      // Supprimer le patient
       await patient.delete()
 
-      return response.noContent()
+      return response.ok({ message: 'Patient supprimé avec succès' })
     } catch (error) {
       console.error('Erreur dans destroy:', error)
       return response.internalServerError({ message: 'Une erreur est survenue lors de la suppression du patient' })
