@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { Navigate } from "react-router-dom";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import {
   Video,
@@ -168,6 +169,11 @@ const DashboardPage = () => {
     day: "numeric",
   });
 
+  // Rediriger les praticiens vers leur dashboard
+  if (user?.role_id === 2) {
+    return <Navigate to="/practitioner/dashboard" replace />;
+  }
+
   if (consultationsLoading || patientsLoading || prescriptionsLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -305,7 +311,7 @@ const DashboardPage = () => {
                 </h2>
                 <p className="text-lg text-[#4F7AF4] mb-6">
                   Prenez rendez-vous en quelques clics pour votre animal, où que
-                  vous soyez. Consultation vidéo, suivi sécurisé, conseils
+                  vous soyez. Téléconsultation, suivi sécurisé, conseils
                   personnalisés.
                 </p>
                 <div className="flex items-center gap-4">

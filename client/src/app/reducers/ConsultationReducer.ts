@@ -51,6 +51,18 @@ export const updateConsultation = createAsyncThunk(
   }
 );
 
+export const deleteConsultation = createAsyncThunk(
+  'consultations/delete',
+  async (id: number, { rejectWithValue }) => {
+    try {
+      await axiosInstance.delete(`/api/consultations/${id}`);
+      return id;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Erreur lors de la suppression de la consultation');
+    }
+  }
+);
+
 const initialState: ConsultationState = {
   consultations: [],
   stats: {

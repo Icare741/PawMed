@@ -116,69 +116,86 @@ export default class ConsultationsController {
         return response.unauthorized({ message: 'Non autorisé' })
       }
 
+      // Seuls les patients peuvent créer des consultations
+      if (user.roleId !== 1) {
+        return response.forbidden({ message: 'Seuls les patients peuvent créer des consultations' })
+      }
+
       const validationSchema = schema.create({
+        practitionerId: schema.number([rules.exists({ table: 'users', column: 'id' })]),
+        patientId: schema.number([rules.exists({ table: 'patients', column: 'id' })]),
         type: schema.string({ trim: true }, [rules.required()]),
-        date: schema.date({}, [rules.required()]),
+        date: schema.string(),
         time: schema.string({}, [rules.required()]),
         notes: schema.string.optional({ trim: true }),
-        availabilityId: schema.number([
-          rules.exists({ table: 'availabilities', column: 'id' })
-        ])
       })
 
       const validated = await request.validate({ schema: validationSchema })
 
-      // Récupérer la disponibilité
-      const availability = await Availability.findOrFail(validated.availabilityId)
-
-      // Vérifier que la disponibilité n'est pas déjà réservée
-      if (availability.isBooked) {
-        return response.badRequest({ message: 'Cette disponibilité est déjà réservée' })
+      // Convertir la date en format DateTime
+      const consultationDate = DateTime.fromFormat(validated.date, 'dd/MM')
+      if (!consultationDate.isValid) {
+        return response.badRequest({ message: 'Format de date invalide. Utilisez DD/MM' })
       }
 
-      // Récupérer ou créer le patient associé à l'utilisateur connecté
-      let patient = await Patient.findBy('owner_email', user.email)
+      // Vérifier que le patient appartient à l'utilisateur connecté
+      const patient = await Patient.query()
+        .where('id', validated.patientId)
+        .where('owner_email', user.email)
+        .first()
+
       if (!patient) {
-        // Créer un nouveau patient avec les informations de l'utilisateur
-        patient = await Patient.create({
-          name: 'À renseigner',
-          species: 'À renseigner',
-          ownerName: user.name,
-          ownerEmail: user.email
-        })
+        return response.forbidden({ message: 'Patient non trouvé ou non autorisé' })
       }
 
-      // Format the date properly for MySQL by setting it to start of day
-      const formattedDate = validated.date.startOf('day')
+      // Vérifier que le praticien existe et est bien un praticien
+      const practitioner = await Practitioner.query()
+        .where('user_id', validated.practitionerId)
+        .first()
+
+      if (!practitioner) {
+        return response.badRequest({ message: 'Praticien non trouvé' })
+      }
+
+      // Vérifier que le créneau est disponible
+      const existingConsultation = await Consultation.query()
+        .where('practitioner_id', practitioner.id)
+        .where('date', consultationDate.toFormat('yyyy-MM-dd'))
+        .where('time', validated.time)
+        .whereNot('status', 'cancelled')
+        .first()
+
+      if (existingConsultation) {
+        return response.badRequest({ message: 'Ce créneau n\'est plus disponible' })
+      }
 
       // Créer la consultation
       const consultation = await Consultation.create({
-        practitionerId: availability.practitionerId,
+        practitionerId: practitioner.id,
         patientId: patient.id,
-        availabilityId: validated.availabilityId,
         patientName: patient.name,
         ownerName: patient.ownerName,
         type: validated.type,
-        date: formattedDate,
+        date: consultationDate,
         time: validated.time,
         notes: validated.notes || null,
         status: 'pending' as const
       })
 
-      // Marquer la disponibilité comme réservée
-      availability.isBooked = true
-      await availability.save()
+      await consultation.load('patient')
+      await consultation.load('practitioner', (query) => {
+        query.preload('user')
+      })
 
       return response.created(consultation)
     } catch (error) {
-      console.error('Erreur complète dans store:', error)
+      console.error('Erreur dans store:', error)
       if (error.code === 'E_VALIDATION_FAILURE') {
         return response.badRequest(error.messages)
       }
       return response.internalServerError({
         message: 'Une erreur est survenue lors de la création de la consultation',
-        error: error.message,
-        details: error
+        error: error.message
       })
     }
   }
@@ -251,6 +268,51 @@ export default class ConsultationsController {
     } catch (error) {
       console.error('Erreur dans destroy:', error)
       return response.internalServerError({ message: 'Une erreur est survenue lors de la suppression de la consultation' })
+    }
+  }
+
+  // Méthode pour récupérer les créneaux disponibles d'un praticien
+  public async getAvailableSlots({ params, response }: HttpContextContract) {
+    try {
+      const practitionerId = Number(params.practitionerId)
+      const date = params.date as string
+      
+      // Convertir la date en format DateTime
+      const consultationDate = DateTime.fromFormat(date, 'yyyy-MM-dd')
+      if (!consultationDate.isValid) {
+        return response.badRequest({ message: 'Format de date invalide. Utilisez YYYY-MM-DD' })
+      }
+
+      // Récupérer les consultations existantes pour cette date et ce praticien
+      const existingConsultations = await Consultation.query()
+        .where('practitioner_id', practitionerId)
+        .where('date', consultationDate.toFormat('yyyy-MM-dd'))
+        .whereNot('status', 'cancelled')
+
+      // Créneaux disponibles (8h à 18h, toutes les 30 minutes)
+      const availableSlots: string[] = []
+      const startHour = 8
+      const endHour = 18
+      
+      for (let hour = startHour; hour < endHour; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) {
+          const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`
+          
+          // Vérifier si le créneau est libre
+          const isBooked = existingConsultations.some(consultation => 
+            consultation.time === time
+          )
+          
+          if (!isBooked) {
+            availableSlots.push(time)
+          }
+        }
+      }
+
+      return response.ok({ availableSlots })
+    } catch (error) {
+      console.error('Erreur dans getAvailableSlots:', error)
+      return response.internalServerError({ message: 'Une erreur est survenue lors de la récupération des créneaux disponibles' })
     }
   }
 }

@@ -6,9 +6,8 @@ import { Label } from "@/components/ui/label"
 import { Lock, Mail, AlertCircle, PawPrint, ArrowRight } from "lucide-react"
 import { Form, Field } from 'react-final-form'
 import { Link, useNavigate } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux'
-import { login } from '../../../app/reducers/AuthReducers'
-import { AppDispatch, RootState } from '../../../app/store'
+import { useAppDispatch, useAppSelector } from '@/app/hooks'
+import { login } from '@/app/reducers/AuthReducers'
 import { motion } from "framer-motion"
 import { useState, useEffect } from 'react'
 import image from '@/assets/images/background_login.jpg'
@@ -20,8 +19,8 @@ interface FormValues {
 }
 
 export function PrettyLogin() {
-  const dispatch = useDispatch<AppDispatch>()
-  const { isLoading, error } = useSelector((state: RootState) => state.auth)
+  const dispatch = useAppDispatch()
+  const { isLoading, error } = useAppSelector((state) => state.auth)  
   const navigate = useNavigate()
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
@@ -52,9 +51,23 @@ export function PrettyLogin() {
   }, [])
 
   const onSubmit = async (values: FormValues) => {
-    const result = await dispatch(login({ email: values.email, password: values.password })).unwrap()
-    if (result.message === "Connexion réussie") {
-      navigate('/');
+    try {
+      const result = await dispatch(login({ email: values.email, password: values.password })).unwrap()
+      if (result.message === "Connexion réussie") {
+        navigate('/');
+      }
+    } catch (error: any) {
+      // L'erreur est déjà gérée par Redux, on ne fait rien ici
+      // Le composant se mettra à jour automatiquement avec l'état d'erreur
+      console.log('Erreur de connexion:', error);
+    }
+  }
+
+  // Réinitialiser l'erreur quand l'utilisateur tape
+  const handleInputChange = () => {
+    if (error) {
+      // On pourrait dispatcher une action pour réinitialiser l'erreur
+      // Mais pour l'instant, on laisse Redux gérer
     }
   }
 
@@ -176,6 +189,10 @@ export function PrettyLogin() {
                           placeholder="Entrez votre email"
                           className="pl-12 w-full border-gray-200 focus:border-[#F4A259] focus:ring-[#F4A259] rounded-xl transition-all duration-300 group-hover:border-[#F4A259]/50"
                           required
+                          onChange={(e) => {
+                            input.onChange(e);
+                            handleInputChange();
+                          }}
                         />
                         <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-hover:text-[#F4A259] transition-colors" />
                       </div>
@@ -197,6 +214,10 @@ export function PrettyLogin() {
                           placeholder="Entrez votre mot de passe"
                           className="pl-12 w-full border-gray-200 focus:border-[#F4A259] focus:ring-[#F4A259] rounded-xl transition-all duration-300 group-hover:border-[#F4A259]/50"
                           required
+                          onChange={(e) => {
+                            input.onChange(e);
+                            handleInputChange();
+                          }}
                         />
                         <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 group-hover:text-[#F4A259] transition-colors" />
                       </div>
@@ -243,6 +264,22 @@ export function PrettyLogin() {
                     transition={{ duration: 0.3 }}
                   />
                 </Button>
+                
+                {/* Affichage de l'erreur */}
+                {error && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2"
+                  >
+                    <AlertCircle className="h-5 w-5 text-red-500" />
+                    <span className="text-red-700 text-sm">
+                      {error === 'Request failed with status code 401' 
+                        ? 'Email ou mot de passe incorrect' 
+                        : error}
+                    </span>
+                  </motion.div>
+                )}
               </form>
             )}
           />

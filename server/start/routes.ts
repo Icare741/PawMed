@@ -59,12 +59,6 @@ Route.group(() => {
 
   // Protected routes
   Route.group(() => {
-    // Practitioner routes
-    Route.get('/practitioners', 'PractitionersController.index')
-    Route.get('/practitioners/:id', 'PractitionersController.show')
-    Route.put('/practitioners/:id', 'PractitionersController.update')
-    Route.delete('/practitioners/:id', 'PractitionersController.destroy')
-
     // Availability routes
     Route.get('/availabilities', 'AvailabilitiesController.index')
     Route.post('/availabilities', 'AvailabilitiesController.store')
@@ -83,5 +77,11 @@ Route.group(() => {
 
     // Prescription routes
     Route.resource('prescriptions', 'PrescriptionsController').apiOnly()
+
+    // Consultation routes avec créneaux disponibles
+    Route.get('/consultations/slots/:practitionerId/:date', 'ConsultationsController.getAvailableSlots')
+
+    // Practitioner routes
+    Route.resource('practitioners', 'PractitionersController').apiOnly()
   }).middleware('auth')
 }).prefix("/api");
