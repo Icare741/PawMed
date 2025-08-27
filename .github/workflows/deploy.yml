@@ -27,10 +27,10 @@ jobs:
         known_hosts: ${{ secrets.KNOWN_HOSTS }}
 
     - name: Deploy to server
-      run: |
-        ssh root@92.112.192.183 '
+      run: |  
+        ssh root@72.60.45.124 '
           cd /app/PawMed &&
-          git remote set-url origin git@github.com:Doxteur/pawmed.git &&
+          git remote set-url origin git@github.com:Icare741/PawMed.git &&
           git pull &&
           docker compose up -d --build
         '
