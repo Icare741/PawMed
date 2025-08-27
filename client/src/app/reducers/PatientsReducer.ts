@@ -66,6 +66,18 @@ export const fetchPatients = createAsyncThunk(
   }
 )
 
+export const fetchAllPatientsForPractitioner = createAsyncThunk(
+  'patients/fetchAllPatientsForPractitioner',
+  async (_, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.get('/api/patients/practitioner/all')
+      return response.data
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Erreur lors du chargement des patients')
+    }
+  }
+)
+
 export const fetchPatient = createAsyncThunk(
   'patients/fetchPatient',
   async (id: number, { rejectWithValue }) => {
@@ -142,6 +154,22 @@ const patientsSlice = createSlice({
         state.error = null
       })
       .addCase(fetchPatients.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload as string
+      })
+
+    // fetchAllPatientsForPractitioner
+    builder
+      .addCase(fetchAllPatientsForPractitioner.pending, (state) => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(fetchAllPatientsForPractitioner.fulfilled, (state, action) => {
+        state.isLoading = false
+        state.patients = action.payload
+        state.error = null
+      })
+      .addCase(fetchAllPatientsForPractitioner.rejected, (state, action) => {
         state.isLoading = false
         state.error = action.payload as string
       })

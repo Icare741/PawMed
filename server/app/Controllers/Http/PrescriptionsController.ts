@@ -168,14 +168,51 @@ export default class PrescriptionsController {
       // Validation des données
       const prescriptionSchema = schema.create({
         status: schema.enum.optional(['active', 'completed', 'expired']),
-        notes: schema.string.optional({ trim: true })
+        notes: schema.string.optional({ trim: true }),
+        items: schema.array.optional().members(
+          schema.object().members({
+            id: schema.number.optional(),
+            medication_name: schema.string({ trim: true }, [rules.minLength(2), rules.maxLength(100)]),
+            dosage: schema.string({ trim: true }, [rules.minLength(2), rules.maxLength(100)]),
+            frequency: schema.string({ trim: true }, [rules.minLength(2), rules.maxLength(100)]),
+            duration: schema.string({ trim: true }, [rules.minLength(2), rules.maxLength(100)]),
+            instructions: schema.string.optional({ trim: true }),
+            quantity: schema.number.optional(),
+            unit: schema.string.optional({ trim: true })
+          })
+        )
       })
 
       const payload = await request.validate({ schema: prescriptionSchema })
 
-      // Mettre à jour l'ordonnance
-      prescription.merge(payload as any)
-      await prescription.save()
+      // Mettre à jour l'ordonnance de base
+      if (payload.status || payload.notes !== undefined) {
+        prescription.merge({
+          status: payload.status || prescription.status,
+          notes: payload.notes !== undefined ? payload.notes : prescription.notes
+        } as any)
+        await prescription.save()
+      }
+
+      // Mettre à jour les items si fournis
+      if (payload.items) {
+        // Supprimer tous les items existants
+        await PrescriptionItem.query().where('prescriptionId', prescription.id).delete()
+
+        // Créer les nouveaux items
+        for (const item of payload.items) {
+          await PrescriptionItem.create({
+            prescriptionId: prescription.id,
+            medicationName: item.medication_name,
+            dosage: item.dosage,
+            frequency: item.frequency,
+            duration: item.duration,
+            instructions: item.instructions,
+            quantity: item.quantity || 1,
+            unit: item.unit || 'comprimé'
+          })
+        }
+      }
 
       // Recharger avec les relations
       await prescription.load('patient')

@@ -1,16 +1,17 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Users,
   Search,
-  Plus,
   Stethoscope,
   Calendar,
   FileText,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/app/hooks";
 import { fetchPatients } from "@/app/reducers/PatientsReducer";
+import { fetchConsultations } from "@/app/reducers/ConsultationReducer";
+import { fetchPrescriptions } from "@/app/reducers/PrescriptionsReducer";
 import SidebarPractitioners from "@/components/core/practitioners/SidebarPractitioners";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,11 +23,31 @@ const PatientsPage = () => {
   const dispatch = useAppDispatch();
   
   const { patients, isLoading, error } = useAppSelector((state) => state.patients);
+  const { consultations } = useAppSelector((state) => state.consultations);
+  const { prescriptions } = useAppSelector((state) => state.prescriptions);
   const { user } = useAppSelector((state) => state.auth);
 
   useEffect(() => {
     dispatch(fetchPatients());
+    dispatch(fetchConsultations());
+    dispatch(fetchPrescriptions());
   }, [dispatch]);
+
+  // Calculer les vraies statistiques
+  const getCurrentMonthConsultations = () => {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    
+    return consultations.filter(consultation => {
+      const consultationDate = new Date(consultation.date + 'T00:00:00');
+      return consultationDate.getMonth() === currentMonth && 
+             consultationDate.getFullYear() === currentYear;
+    }).length;
+  };
+
+  const getActivePrescriptions = () => {
+    return prescriptions.filter(prescription => prescription.status === 'active').length;
+  };
 
   if (isLoading) {
     return (
@@ -95,8 +116,8 @@ const PatientsPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {[
             { label: 'Total patients', value: patients.length, icon: Users, color: 'text-blue-600', bgColor: 'bg-blue-50' },
-            { label: 'Consultations ce mois', value: '12', icon: Calendar, color: 'text-green-600', bgColor: 'bg-green-50' },
-            { label: 'Ordonnances actives', value: '8', icon: FileText, color: 'text-purple-600', bgColor: 'bg-purple-50' },
+            { label: 'Consultations ce mois', value: getCurrentMonthConsultations(), icon: Calendar, color: 'text-green-600', bgColor: 'bg-green-50' },
+            { label: 'Ordonnances actives', value: getActivePrescriptions(), icon: FileText, color: 'text-purple-600', bgColor: 'bg-purple-50' },
           ].map((stat, index) => (
             <motion.div
               key={stat.label}
@@ -127,16 +148,7 @@ const PatientsPage = () => {
         >
           <Card className="bg-white/80 backdrop-blur-xl border-0 shadow-lg">
             <div className="p-6 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-xl font-bold text-[#4F7AF4]">Tous mes patients</h2>
-                <Button
-                  onClick={() => navigate('/practitioner/patients/new')}
-                  className="bg-gradient-to-r from-[#4F7AF4] to-[#F44F7A] text-white"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nouveau patient
-                </Button>
-              </div>
+              <h2 className="text-xl font-bold text-[#4F7AF4]">Tous mes patients</h2>
             </div>
             
             <div className="p-6">
@@ -144,7 +156,7 @@ const PatientsPage = () => {
                 <div className="text-center py-12 text-gray-500">
                   <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                   <p className="text-lg">Aucun patient pour le moment</p>
-                  <p className="text-sm">Les patients apparaîtront ici une fois créés</p>
+                  <p className="text-sm">Les patients apparaîtront ici une fois que vous aurez des consultations</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

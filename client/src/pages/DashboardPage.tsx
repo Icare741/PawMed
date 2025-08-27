@@ -493,10 +493,10 @@ const DashboardPage = () => {
                       </div>
                       <div className="flex-1">
                         <p className="font-semibold text-gray-900 text-base">
-                          {presc.items[0]?.medicationName || 'Médicament'} - {presc.patient?.name || 'Patient'}
+                          {presc.items[0]?.medication_name || 'Médicament'} - {presc.patient?.name || 'Patient'}
                         </p>
                         <p className="text-sm text-[#7A90C3]">
-                          {presc.practitioner?.name || 'Dr.'} • {new Date(presc.prescriptionDate + 'T00:00:00').toLocaleDateString('fr-FR')}
+                          {presc.practitioner?.name || 'Dr.'} • {new Date(presc.prescription_date + 'T00:00:00').toLocaleDateString('fr-FR')}
                         </p>
                       </div>
                     </div>

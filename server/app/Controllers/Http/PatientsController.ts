@@ -11,7 +11,26 @@ export default class PatientsController {
         return response.unauthorized({ message: 'Non autorisé' })
       }
 
-      // Récupérer tous les patients de l'utilisateur connecté
+      // Si c'est un praticien, récupérer ses patients (ceux avec qui il a eu des consultations)
+      if (user.roleId === 2) {
+        const patients = await Patient.query()
+          .whereHas('consultations', (query) => {
+            query.whereHas('practitioner', (practitionerQuery) => {
+              practitionerQuery.where('user_id', user.id)
+            })
+          })
+          .orderBy('name', 'asc')
+          .preload('consultations', (query) => {
+            query.whereHas('practitioner', (practitionerQuery) => {
+              practitionerQuery.where('user_id', user.id)
+            }).orderBy('date', 'desc').limit(5)
+          })
+          .distinct()
+
+        return response.ok(patients)
+      }
+
+      // Sinon, récupérer tous les patients de l'utilisateur connecté (propriétaire)
       const patients = await Patient.query()
         .where('ownerEmail', user.email)
         .orderBy('name', 'asc')
@@ -22,6 +41,34 @@ export default class PatientsController {
       return response.ok(patients)
     } catch (error) {
       console.error('Erreur dans index:', error)
+      return response.internalServerError({ message: 'Une erreur est survenue lors de la récupération des patients' })
+    }
+  }
+
+  // Nouvelle méthode pour que les praticiens puissent voir tous les patients disponibles
+  public async allForPractitioner({ auth, response }: HttpContextContract) {
+    try {
+      const user = auth.user
+      if (!user) {
+        return response.unauthorized({ message: 'Non autorisé' })
+      }
+
+      if (user.roleId !== 2) {
+        return response.forbidden({ message: 'Accès réservé aux praticiens' })
+      }
+
+      // Récupérer tous les patients disponibles pour le praticien
+      const patients = await Patient.query()
+        .orderBy('name', 'asc')
+        .preload('consultations', (query) => {
+          query.whereHas('practitioner', (practitionerQuery) => {
+            practitionerQuery.where('user_id', user.id)
+          }).orderBy('date', 'desc')
+        })
+
+      return response.ok(patients)
+    } catch (error) {
+      console.error('Erreur dans allForPractitioner:', error)
       return response.internalServerError({ message: 'Une erreur est survenue lors de la récupération des patients' })
     }
   }

@@ -39,7 +39,7 @@ const PrescriptionActions: React.FC<PrescriptionActionsProps> = ({ prescription 
         <body>
           <div class="header">
             <h1>Ordonnance #${prescription.id}</h1>
-            <p>Date: ${formatDate(prescription.prescriptionDate)}</p>
+            <p>Date: ${formatDate(prescription.prescription_date)}</p>
             <p>Statut: ${prescription.status || 'N/A'}</p>
           </div>
           <div class="prescription-info">
@@ -53,7 +53,7 @@ const PrescriptionActions: React.FC<PrescriptionActionsProps> = ({ prescription 
             <h3>Médicaments prescrits</h3>
             ${prescription.items.map(item => `
               <div class="medication-item">
-                <h4>${item.medicationName || 'Médicament non défini'}</h4>
+                <h4>${item.medication_name || 'Médicament non défini'}</h4>
                 <p><strong>Posologie:</strong> ${item.dosage || 'Non définie'}</p>
                 <p><strong>Fréquence:</strong> ${item.frequency || 'Non définie'}</p>
                 <p><strong>Durée:</strong> ${item.duration || 'Non définie'}</p>

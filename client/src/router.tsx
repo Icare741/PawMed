@@ -36,6 +36,7 @@ import HealthAdvicePage from './pages/clients/HealthAdvicePage';
 import PrescriptionsPage from './pages/clients/PrescriptionsPage';
 import DocumentsPage from './pages/clients/DocumentsPage';
 import JoinConsultationPage from './pages/clients/JoinConsultationPage';
+import EditPrescriptionPage from './pages/practitioners/EditPrescriptionPage';
 
 const stripePromise = loadStripe(
   'pk_test_51O5unuFEj403Phjgbi9HfcgZSe8NW3jkyu9L47FNAx8dwXknEndmFqYhlmqo2BksV1Uwsv1rfo0s3ZeeZgQYuxSn00P9W9WRNc'
@@ -273,6 +274,16 @@ export const AppRoutes = () => {
           <AuthGuard>
             <RoleGuard allowedRoles={[2]}>
               <PractitionerPrescriptionsPage />
+            </RoleGuard>
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/practitioner/prescriptions/:id/edit"
+        element={
+          <AuthGuard>
+            <RoleGuard allowedRoles={[2]}>
+              <EditPrescriptionPage />
             </RoleGuard>
           </AuthGuard>
         }

@@ -4,28 +4,28 @@ import axiosInstance from '@/utils/axiosInstance'
 // Types
 export interface PrescriptionItem {
   id: number
-  prescriptionId: number
-  medicationName: string
+  prescription_id: number
+  medication_name: string
   dosage: string
   frequency: string
   duration: string
   instructions: string | null
   quantity: number
   unit: string
-  createdAt: string
-  updatedAt: string
+  created_at: string
+  updated_at: string
 }
 
 export interface Prescription {
   id: number
-  patientId: number
-  practitionerId: number
-  consultationId: number | null
-  prescriptionDate: string
+  patient_id: number
+  practitioner_id: number
+  consultation_id: number | null
+  prescription_date: string
   status: 'active' | 'completed' | 'expired'
   notes: string | null
-  createdAt: string
-  updatedAt: string
+  created_at: string
+  updated_at: string
   patient?: {
     id: number
     name: string

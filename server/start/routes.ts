@@ -67,6 +67,7 @@ Route.group(() => {
 
     // Patient routes
     Route.resource('patients', 'PatientsController').apiOnly()
+    Route.get('/patients/practitioner/all', 'PatientsController.allForPractitioner')
 
     // Consultation routes
     Route.get('/consultations/stats', 'ConsultationsController.stats')
