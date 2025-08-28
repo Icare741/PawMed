@@ -2,6 +2,7 @@ import Route from "@ioc:Adonis/Core/Route";
 import AutoSwagger from "adonis-autoswagger";
 import swagger from "Config/swagger";
 import HealthCheck from "@ioc:Adonis/Core/HealthCheck";
+import Metrics from 'App/Services/Metrics'
 
 Route.group(() => {
   // Routes d'authentification (pas de middleware auth)
@@ -56,6 +57,13 @@ Route.group(() => {
 
     return report.healthy ? response.ok(report) : response.badRequest(report);
   });
+
+  // Metrics
+  Route.get('metrics', async ({ response }) => {
+    const body = await Metrics.metrics()
+    response.header('Content-Type', 'text/plain; version=0.0.4; charset=utf-8')
+    return body
+  })
 
   // Protected routes
   Route.group(() => {
