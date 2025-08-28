@@ -1,9 +1,14 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
+
+// Évite d'importer toutes les pages/ESM (ex: date-fns) via le router
+jest.mock('./router', () => ({
+  AppRoutes: () => null,
+}));
+
 import App from './App';
 
-test('renders learn react link', () => {
-  render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+test("rend l'app sans crash", () => {
+  const { baseElement } = render(<App />);
+  expect(baseElement).toBeTruthy();
 });
