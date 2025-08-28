@@ -1,3 +1,8 @@
+## [](https://github.com/Icare741/PawMed/compare/v1.2.0...v) (2025-08-28)
+
+### Features
+
+* **metrics:** expose /api/metrics for Prometheus ([b973593](https://github.com/Icare741/PawMed/commit/b9735936e7847cfb66638b0b6f464d72496b5598))
 ##  (2025-08-28)
 
 ### Features
