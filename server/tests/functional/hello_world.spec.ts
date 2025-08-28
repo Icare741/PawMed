@@ -1,8 +1,6 @@
 import { test } from '@japa/runner'
 
-test('display welcome page', async ({ client }) => {
-  const response = await client.get('/')
-
+test('GET /api/swagger retourne la documentation', async ({ client }) => {
+  const response = await client.get('/api/swagger')
   response.assertStatus(200)
-  response.assertBodyContains({ hello: 'world' })
 })
