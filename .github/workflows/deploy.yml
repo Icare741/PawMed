@@ -11,6 +11,17 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_DATABASE: test
+          MYSQL_ROOT_PASSWORD: root
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,6 +53,12 @@ jobs:
           PORT: 3333
           APP_NAME: PawMed
           DRIVE_DISK: local
+          DB_CONNECTION: mysql
+          MYSQL_HOST: mysql
+          MYSQL_PORT: 3306
+          MYSQL_USER: root
+          MYSQL_PASSWORD: root
+          MYSQL_DB_NAME: test
 
   deploy:
     runs-on: ubuntu-latest
