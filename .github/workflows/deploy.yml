@@ -35,6 +35,9 @@ jobs:
       - name: Run tests (server)
         run: yarn test
         working-directory: server
+        env:
+          APP_KEY: ${{ secrets.APP_KEY }}
+          NODE_ENV: test
 
   deploy:
     runs-on: ubuntu-latest
@@ -48,9 +51,8 @@ jobs:
 
       - name: Deploy to server
         run: |
-          ssh root@92.112.192.183 '
+          ssh root@72.60.45.124 '
             cd /app/PawMed &&
-            git remote set-url origin git@github.com:Doxteur/pawmed.git &&
             git pull &&
             docker compose up -d --build
           '
