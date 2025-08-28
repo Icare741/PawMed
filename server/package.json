@@ -7,6 +7,7 @@
     "build": "node ace build --production",
     "start": "node server.js",
     "test": "node ace test",
+    "test:coverage": "c8 --reporter=lcov --reporter=text-summary yarn test",
     "lint": "eslint . --ext=.ts"
   },
   "eslintConfig": {
@@ -24,6 +25,7 @@
     "@types/proxy-addr": "^2.0.3",
     "@types/source-map-support": "^0.5.10",
     "adonis-preset-ts": "^2.1.0",
+    "c8": "^10.1.2",
     "eslint": "^9.9.1",
     "eslint-plugin-adonis": "^2.1.1",
     "pino-pretty": "^11.2.2",
