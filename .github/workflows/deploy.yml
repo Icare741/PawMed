@@ -1,4 +1,4 @@
-name: Deploy Server
+name: CI/CD
 
 on:
   push:
@@ -9,27 +9,48 @@ on:
       - 'client/**'
 
 jobs:
-  build-and-deploy:
+  test:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v2
-      with:
-        node-version: '20'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    - name: Install SSH key
-      uses: shimataro/ssh-key-action@v2
-      with:
-        key: ${{ secrets.SERVER_SSH_KEY }}
-        known_hosts: ${{ secrets.KNOWN_HOSTS }}
+      - name: Install dependencies (client)
+        run: yarn install --frozen-lockfile
+        working-directory: client
 
-    - name: Deploy to server
-      run: |  
-        ssh root@72.60.45.124 '
-          cd /app/PawMed &&
-          git pull &&
-          docker compose up -d --build
-        '
+      - name: Run unit tests (client)
+        run: yarn test --ci --watchAll=false
+        working-directory: client
+
+      - name: Install dependencies (server)
+        run: yarn install --frozen-lockfile
+        working-directory: server
+
+      - name: Run tests (server)
+        run: yarn test
+        working-directory: server
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [test]
+    steps:
+      - name: Install SSH key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          known_hosts: ${{ secrets.KNOWN_HOSTS }}
+
+      - name: Deploy to server
+        run: |
+          ssh root@92.112.192.183 '
+            cd /app/PawMed &&
+            git remote set-url origin git@github.com:Doxteur/pawmed.git &&
+            git pull &&
+            docker compose up -d --build
+          '
